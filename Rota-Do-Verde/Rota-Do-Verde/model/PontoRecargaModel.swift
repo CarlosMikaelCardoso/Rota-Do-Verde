@@ -1,21 +1,20 @@
 import Foundation
-import SwiftUI
-import Combine
+import CoreLocation
 
 struct PontoRecarga: Codable, Identifiable {
-    let id : String
-    let nome : String
-    let descricao : String?
-    let status : String
-    let latitude : String
-    let longitude : String
-    let endereco : String
-    let conectores : [Conector]
-    let servicos : [String]
-    let ultimaAtualizacao : String?
-    let ativo : Bool?
-    
-    enum ContContent: String, Codable {
+    let id: String
+    let nome: String
+    let descricao: String?
+    let status: String
+    let latitude: Double
+    let longitude: Double
+    let endereco: String
+    let conectores: [Conector]
+    let servicos: [String]
+    let ultimaAtualizacao: String?
+    let ativo: Bool?
+
+    enum CodingKeys: String, CodingKey {
         case id
         case nome
         case descricao
@@ -33,9 +32,15 @@ struct PontoRecarga: Codable, Identifiable {
 struct Conector: Codable {
     let tipo: String
     let potenciaKW: Int
-    
+
     enum CodingKeys: String, CodingKey {
         case tipo
         case potenciaKW = "potencia_kw"
+    }
+}
+
+extension PontoRecarga {
+    var coordinate: CLLocationCoordinate2D {
+        CLLocationCoordinate2D(latitude: latitude, longitude: longitude)
     }
 }
