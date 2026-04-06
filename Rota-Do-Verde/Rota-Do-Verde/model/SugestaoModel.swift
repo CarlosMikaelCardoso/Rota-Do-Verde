@@ -1,8 +1,17 @@
-//
-//  SugestaoModel.swift
-//  Rota-Do-Verde
-//
-//  Created by Turma02-2 on 06/04/26.
-//
-
 import Foundation
+import Combine
+import SwiftUI
+
+struct SugestaoModel: Codable {
+    let pontoId: String
+    let campoSugerido: String
+    let valorSugerido: String
+    let descricao: String
+    
+    enum CodingKeys: String, CodingKey {
+        case pontoId = "ponto_id"
+        case campoSugerido = "campo_sugerido"
+        case valorSugerido = "valor_sugerido"
+        case descricao
+    }
+}

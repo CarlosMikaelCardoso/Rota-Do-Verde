@@ -1,6 +1,6 @@
 import SwiftUI
 
-struct sheetView: View {
+struct pontoView: View {
     let local: location
     var body: some View {
         ScrollView {
