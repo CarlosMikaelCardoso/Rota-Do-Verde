@@ -1,49 +1,167 @@
 import SwiftUI
 
-struct pontoView: View {
-    let local: PontoRecarga
+struct PontoView: View {
+    let pontoId: String
+    @StateObject private var viewModel = PontosViewModel()
     
     var body: some View {
-        ScrollView {
-            VStack(alignment: .leading, spacing: 40) {
-                // Placeholder genérico já que não há foto no PontoRecargaModel
-                Image(systemName: "bolt.car.fill")
-                    .resizable()
-                    .scaledToFit()
-                    .frame(height: 100)
-                    .foregroundColor(.green)
-                    .frame(maxWidth: .infinity, minHeight: 250)
-                    .background(Color.green.opacity(0.1))
-                    .cornerRadius(15)
-                    .padding(.horizontal)
-                
-                VStack(alignment: .leading, spacing: 10) {
-                    Text(local.nome)
-                        .font(.largeTitle)
-                        .bold()
-                        .fixedSize(horizontal: false, vertical: true)
-                        .frame(maxWidth: .infinity, alignment: .center)
-                    
-                    Text(local.descricao ?? "Sem descrição disponível.")
-                        .font(.body)
-                        .lineSpacing(2)
-                        .multilineTextAlignment(.leading)
-                        .fixedSize(horizontal: false, vertical: true)
-                        .frame(maxWidth: .infinity, alignment: .leading)
-                        .padding(.horizontal, 40)
-                    
-                    Text("Endereço: \(local.endereco)")
-                        .font(.subheadline)
-                        .padding(.horizontal, 40)
-                        .padding(.top, 10)
+        Group {
+            if viewModel.carregando {
+                VStack(spacing: 16) {
+                    ProgressView()
+                    Text("Carregando informações do ponto...")
+                        .foregroundColor(.secondary)
                 }
-                .padding()
+                .frame(maxWidth: .infinity, maxHeight: .infinity)
                 
-                Spacer()
+            } else if let erro = viewModel.erro {
+                VStack(spacing: 12) {
+                    Image(systemName: "exclamationmark.triangle")
+                        .font(.system(size: 40))
+                        .foregroundColor(.orange)
+                    
+                    Text("Erro ao carregar o ponto")
+                        .font(.headline)
+                    
+                    Text(erro)
+                        .font(.caption)
+                        .foregroundColor(.secondary)
+                        .multilineTextAlignment(.center)
+                        .padding(.horizontal)
+                }
+                .frame(maxWidth: .infinity, maxHeight: .infinity)
+                
+            } else if let ponto = viewModel.pontoSelecionado {
+                ScrollView {
+                    VStack(alignment: .leading, spacing: 24) {
+                        
+                        VStack(spacing: 12) {
+                            Image(systemName: "bolt.car.circle.fill")
+                                .resizable()
+                                .scaledToFit()
+                                .frame(width: 100, height: 100)
+                                .foregroundColor(.green)
+                                .frame(maxWidth: .infinity)
+                            
+                            Text(ponto.nome)
+                                .font(.title)
+                                .fontWeight(.bold)
+                                .multilineTextAlignment(.center)
+                            
+                            Text(statusFormatado(ponto.status))
+                                .font(.subheadline)
+                                .foregroundColor(corStatus(ponto.status))
+                                .padding(.horizontal, 12)
+                                .padding(.vertical, 6)
+                                .background(corStatus(ponto.status).opacity(0.12))
+                                .clipShape(Capsule())
+                        }
+                        .frame(maxWidth: .infinity)
+                        .padding(.top)
+                        
+                        Group {
+                            blocoTitulo("Endereço")
+                            Text(ponto.endereco)
+                                .font(.body)
+                                .foregroundColor(.primary)
+                        }
+                        
+                        if let descricao = ponto.descricao, !descricao.isEmpty {
+                            Group {
+                                blocoTitulo("Descrição")
+                                Text(descricao)
+                                    .font(.body)
+                                    .foregroundColor(.primary)
+                            }
+                        }
+                        
+                        Group {
+                            blocoTitulo("Conectores")
+                            
+                            VStack(alignment: .leading, spacing: 10) {
+                                ForEach(Array(ponto.conectores.enumerated()), id: \.offset) { _, conector in
+                                    HStack {
+                                        Text(conector.tipo)
+                                            .fontWeight(.medium)
+                                        Spacer()
+                                        Text("\(conector.potenciaKW) kW")
+                                            .foregroundColor(.secondary)
+                                    }
+                                    .padding()
+                                    .background(Color(.secondarySystemBackground))
+                                    .cornerRadius(12)
+                                }
+                            }
+                        }
+                        
+                        Group {
+                            blocoTitulo("Serviços")
+                            
+                            if ponto.servicos.isEmpty {
+                                Text("Nenhum serviço informado")
+                                    .foregroundColor(.secondary)
+                            } else {
+                                VStack(alignment: .leading, spacing: 8) {
+                                    ForEach(ponto.servicos, id: \.self) { servico in
+                                        HStack(spacing: 8) {
+                                            Image(systemName: "checkmark.circle.fill")
+                                                .foregroundColor(.green)
+                                            Text(servico.capitalized)
+                                        }
+                                    }
+                                }
+                            }
+                        }
+                        
+                        Group {
+                            blocoTitulo("Última atualização")
+                            Text(ponto.ultimaAtualizacao ?? "Não informada")
+                                .foregroundColor(.secondary)
+                        }
+                    }
+                    .padding()
+                }
+                .navigationTitle(ponto.nome)
+                .navigationBarTitleDisplayMode(.inline)
+                
+            } else {
+                VStack {
+                    Text("Ponto não encontrado")
+                        .foregroundColor(.secondary)
+                }
+                .frame(maxWidth: .infinity, maxHeight: .infinity)
             }
-            .background(Color(.systemBackground))
         }
-        .navigationTitle(local.nome)
-        .navigationBarTitleDisplayMode(.inline)
+        .task {
+            await viewModel.carregarPontoPorId(pontoId)
+        }
+    }
+    
+    private func blocoTitulo(_ titulo: String) -> some View {
+        Text(titulo)
+            .font(.headline)
+            .fontWeight(.semibold)
+    }
+    
+    private func statusFormatado(_ status: String) -> String {
+        switch status.lowercased() {
+        case "funcionando":
+            return "Funcionando"
+        case "manutencao":
+            return "Em manutenção"
+        default:
+            return status.capitalized
+        }
+    }
+    
+    private func corStatus(_ status: String) -> Color {
+        switch status.lowercased() {
+        case "funcionando":
+            return .green
+        case "manutencao":
+            return .orange
+        default:
+            return .gray
+        }
     }
 }
