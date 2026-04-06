@@ -29,7 +29,7 @@ final class APIService {
     // Troca aqui pelo IP da máquina onde o Node-RED está rodando
     // Se estiver no simulador do iPhone e Node-RED na tua máquina:
     // ex: http://127.0.0.1:1880 ou http://192.168.x.x:1880
-    private let baseURL = "http://127.0.0.1:1880"
+    private let baseURL = "http://192.168.128.12:1880"
     
     private init() {}
     

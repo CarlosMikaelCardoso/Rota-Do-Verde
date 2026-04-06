@@ -45,6 +45,20 @@ struct ContentView: View {
                         .stroke(.white.opacity(0.3), lineWidth: 1)
                 }
                 .padding(.top, 16)
+                
+                Button(action: {
+                    print("Botão Adicionar pressionado - Implementar destino depois")
+                }) {
+                    Image(systemName: "plus")
+                        .font(.title.bold())
+                        .padding()
+                        .background(Color.green)
+                        .foregroundColor(.white)
+                        .clipShape(Circle())
+                        .shadow(color: .black.opacity(0.3), radius: 5, x: 0, y: 3)
+                }
+                .padding(.top, 650)
+                .padding(.trailing, 260)
             }
             .onChange(of: selectedLocation) { _, newLocation in
                 guard let newLocation else { return }
