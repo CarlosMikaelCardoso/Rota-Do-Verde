@@ -1,7 +1,7 @@
 import Foundation
 import CoreLocation
 
-struct PontoRecarga: Codable, Identifiable {
+struct PontoRecarga: Codable, Identifiable, Hashable, Equatable {
     let id: String
     let nome: String
     let descricao: String?
@@ -27,9 +27,18 @@ struct PontoRecarga: Codable, Identifiable {
         case ultimaAtualizacao = "ultima_atualizacao"
         case ativo
     }
+    
+    // Compara os objetos usando apenas o ID para melhor performance
+    static func == (lhs: PontoRecarga, rhs: PontoRecarga) -> Bool {
+        return lhs.id == rhs.id
+    }
+    
+    func hash(into hasher: inout Hasher) {
+        hasher.combine(id)
+    }
 }
 
-struct Conector: Codable {
+struct Conector: Codable, Hashable, Equatable {
     let tipo: String
     let potenciaKW: Int
 
