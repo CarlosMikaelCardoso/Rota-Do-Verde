@@ -40,7 +40,7 @@ struct Conector: Codable {
 }
 
 extension PontoRecarga {
-    var coordinate: CLLocationCoordinate2D {
+    var coordenada: CLLocationCoordinate2D {
         CLLocationCoordinate2D(latitude: latitude, longitude: longitude)
     }
 }

@@ -1,6 +1,6 @@
 import SwiftUI
 
-struct pontoView: View {
+struct sheetView: View {
     let local: location
     var body: some View {
         ScrollView {
@@ -54,6 +54,7 @@ struct pontoView: View {
                     Text(local.descricao)
                         .font(.body)
                         .lineSpacing(2)
+                    
                         .multilineTextAlignment(.leading)
                         .fixedSize(horizontal: false, vertical: true)
                         .frame(maxWidth: .infinity, alignment: .leading)
