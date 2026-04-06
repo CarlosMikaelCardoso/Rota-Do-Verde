@@ -1,0 +1,576 @@
+[
+    {
+        "id": "tab_voltpoint_full",
+        "type": "tab",
+        "label": "VoltPoint API + Seed",
+        "disabled": false,
+        "info": ""
+    },
+    {
+        "id": "inject_seed_voltpoint",
+        "type": "inject",
+        "z": "tab_voltpoint_full",
+        "name": "Semear banco",
+        "props": [],
+        "repeat": "",
+        "crontab": "",
+        "once": false,
+        "onceDelay": 0.1,
+        "topic": "",
+        "x": 120,
+        "y": 80,
+        "wires": [
+            [
+                "fn_seed_docs_voltpoint"
+            ]
+        ]
+    },
+    {
+        "id": "fn_seed_docs_voltpoint",
+        "type": "function",
+        "z": "tab_voltpoint_full",
+        "name": "Montar documentos iniciais",
+        "func": "msg.payload = [\n    {\n        _id: \"ponto_001\",\n        tipo: \"ponto_recarga\",\n        nome: \"Estação Shopping Belém\",\n        status: \"funcionando\",\n        latitude: -1.4558,\n        longitude: -48.4902,\n        endereco: \"Av. Exemplo, 1000, Belém - PA\",\n        conectores: [\n            { tipo: \"CCS2\", potencia_kw: 60 },\n            { tipo: \"Tipo 2\", potencia_kw: 22 }\n        ],\n        servicos: [\"wifi\", \"banheiro\", \"estacionamento\"],\n        ultima_atualizacao: \"2026-04-06T10:00:00Z\",\n        ativo: true\n    },\n    {\n        _id: \"ponto_002\",\n        tipo: \"ponto_recarga\",\n        nome: \"Eletroposto UFPA\",\n        status: \"manutencao\",\n        latitude: -1.4748,\n        longitude: -48.4552,\n        endereco: \"Cidade Universitária, Belém - PA\",\n        conectores: [\n            { tipo: \"Tipo 2\", potencia_kw: 22 }\n        ],\n        servicos: [\"estacionamento\"],\n        ultima_atualizacao: \"2026-04-05T18:30:00Z\",\n        ativo: true\n    },\n    {\n        _id: \"ponto_003\",\n        tipo: \"ponto_recarga\",\n        nome: \"Posto BR Nazaré\",\n        status: \"funcionando\",\n        latitude: -1.4501,\n        longitude: -48.4890,\n        endereco: \"Av. Nazaré, Belém - PA\",\n        conectores: [\n            { tipo: \"CHAdeMO\", potencia_kw: 50 },\n            { tipo: \"CCS2\", potencia_kw: 50 }\n        ],\n        servicos: [\"loja\", \"banheiro\", \"conveniencia\"],\n        ultima_atualizacao: \"2026-04-06T08:15:00Z\",\n        ativo: true\n    },\n    {\n        _id: \"veiculo_001\",\n        tipo: \"veiculo\",\n        marca: \"BYD\",\n        modelo: \"Dolphin\",\n        conectores_compativeis: [\"CCS2\", \"Tipo 2\"],\n        potencia_max_suportada_kw: 60\n    },\n    {\n        _id: \"veiculo_002\",\n        tipo: \"veiculo\",\n        marca: \"Nissan\",\n        modelo: \"Leaf\",\n        conectores_compativeis: [\"CHAdeMO\", \"Tipo 2\"],\n        potencia_max_suportada_kw: 50\n    },\n    {\n        _id: \"veiculo_003\",\n        tipo: \"veiculo\",\n        marca: \"Volvo\",\n        modelo: \"EX30\",\n        conectores_compativeis: [\"CCS2\", \"Tipo 2\"],\n        potencia_max_suportada_kw: 150\n    }\n];\nreturn msg;",
+        "outputs": 1,
+        "noerr": 0,
+        "initialize": "",
+        "finalize": "",
+        "libs": [],
+        "x": 360,
+        "y": 80,
+        "wires": [
+            [
+                "split_seed_voltpoint"
+            ]
+        ]
+    },
+    {
+        "id": "split_seed_voltpoint",
+        "type": "split",
+        "z": "tab_voltpoint_full",
+        "name": "Separar documentos",
+        "splt": "\\n",
+        "spltType": "str",
+        "arraySplt": 1,
+        "arraySpltType": "len",
+        "stream": false,
+        "addname": "",
+        "x": 640,
+        "y": 80,
+        "wires": [
+            [
+                "e788ac6a17fb79ac"
+            ]
+        ]
+    },
+    {
+        "id": "debug_seed_voltpoint",
+        "type": "debug",
+        "z": "tab_voltpoint_full",
+        "name": "Resultado seed",
+        "active": true,
+        "tosidebar": true,
+        "console": false,
+        "tostatus": false,
+        "complete": "payload",
+        "targetType": "msg",
+        "statusVal": "",
+        "statusType": "auto",
+        "x": 1050,
+        "y": 80,
+        "wires": []
+    },
+    {
+        "id": "http_get_pontos_full",
+        "type": "http in",
+        "z": "tab_voltpoint_full",
+        "name": "GET /pontos",
+        "url": "/pontos",
+        "method": "get",
+        "upload": false,
+        "swaggerDoc": "",
+        "x": 110,
+        "y": 180,
+        "wires": [
+            [
+                "03807467d6fea5bb"
+            ]
+        ]
+    },
+    {
+        "id": "fn_formatar_pontos_full",
+        "type": "function",
+        "z": "tab_voltpoint_full",
+        "name": "Formatar resposta pontos",
+        "func": "let docs = Array.isArray(msg.payload) ? msg.payload : [];\n\ndocs = docs.filter(doc => doc && doc.tipo === \"ponto_recarga\" && doc.ativo === true);\n\nmsg.payload = docs.map(doc => ({\n    id: doc._id,\n    nome: doc.nome,\n    status: doc.status,\n    latitude: doc.latitude,\n    longitude: doc.longitude,\n    endereco: doc.endereco,\n    conectores: doc.conectores || [],\n    servicos: doc.servicos || [],\n    ultima_atualizacao: doc.ultima_atualizacao\n}));\n\nreturn msg;",
+        "outputs": 1,
+        "noerr": 0,
+        "initialize": "",
+        "finalize": "",
+        "libs": [],
+        "x": 750,
+        "y": 180,
+        "wires": [
+            [
+                "http_response_pontos_full"
+            ]
+        ]
+    },
+    {
+        "id": "http_response_pontos_full",
+        "type": "http response",
+        "z": "tab_voltpoint_full",
+        "name": "Resposta /pontos",
+        "statusCode": "",
+        "headers": {
+            "Content-Type": "application/json"
+        },
+        "x": 1050,
+        "y": 180,
+        "wires": []
+    },
+    {
+        "id": "http_get_veiculos_full",
+        "type": "http in",
+        "z": "tab_voltpoint_full",
+        "name": "GET /veiculos",
+        "url": "/veiculos",
+        "method": "get",
+        "upload": false,
+        "swaggerDoc": "",
+        "x": 120,
+        "y": 280,
+        "wires": [
+            [
+                "80c5f26faa4d6ef1"
+            ]
+        ]
+    },
+    {
+        "id": "fn_formatar_veiculos_full",
+        "type": "function",
+        "z": "tab_voltpoint_full",
+        "name": "Formatar resposta veículos",
+        "func": "let docs = Array.isArray(msg.payload) ? msg.payload : [];\n\ndocs = docs.filter(doc => doc && doc.tipo === \"veiculo\");\n\nmsg.payload = docs.map(doc => ({\n    id: doc._id,\n    marca: doc.marca,\n    modelo: doc.modelo,\n    conectores_compativeis: doc.conectores_compativeis || [],\n    potencia_max_suportada_kw: doc.potencia_max_suportada_kw\n}));\n\nreturn msg;",
+        "outputs": 1,
+        "noerr": 0,
+        "initialize": "",
+        "finalize": "",
+        "libs": [],
+        "x": 840,
+        "y": 280,
+        "wires": [
+            [
+                "http_response_veiculos_full"
+            ]
+        ]
+    },
+    {
+        "id": "http_response_veiculos_full",
+        "type": "http response",
+        "z": "tab_voltpoint_full",
+        "name": "Resposta /veiculos",
+        "statusCode": "",
+        "headers": {
+            "Content-Type": "application/json"
+        },
+        "x": 1070,
+        "y": 280,
+        "wires": []
+    },
+    {
+        "id": "e788ac6a17fb79ac",
+        "type": "cloudantplus out",
+        "z": "tab_voltpoint_full",
+        "name": "",
+        "cloudant": "10a0bdc82fc76e99",
+        "database": "voltpoint1",
+        "service": "_ext_",
+        "payonly": true,
+        "operation": "insert",
+        "x": 840,
+        "y": 80,
+        "wires": [
+            [
+                "debug_seed_voltpoint"
+            ]
+        ]
+    },
+    {
+        "id": "03807467d6fea5bb",
+        "type": "cloudantplus in",
+        "z": "tab_voltpoint_full",
+        "name": "",
+        "cloudant": "10a0bdc82fc76e99",
+        "database": "voltpoint1",
+        "service": "_ext_",
+        "search": "_all_",
+        "design": "",
+        "index": "",
+        "x": 480,
+        "y": 180,
+        "wires": [
+            [
+                "fn_formatar_pontos_full"
+            ]
+        ]
+    },
+    {
+        "id": "80c5f26faa4d6ef1",
+        "type": "cloudantplus in",
+        "z": "tab_voltpoint_full",
+        "name": "",
+        "cloudant": "10a0bdc82fc76e99",
+        "database": "voltpoint1",
+        "service": "_ext_",
+        "search": "_all_",
+        "design": "",
+        "index": "",
+        "x": 480,
+        "y": 280,
+        "wires": [
+            [
+                "fn_formatar_veiculos_full"
+            ]
+        ]
+    },
+    {
+        "id": "http_compatibilidade",
+        "type": "http in",
+        "z": "tab_voltpoint_full",
+        "name": "GET /compatibilidade/:veiculo_id",
+        "url": "/compatibilidade/:veiculo_id",
+        "method": "get",
+        "upload": false,
+        "swaggerDoc": "",
+        "x": 150,
+        "y": 380,
+        "wires": [
+            [
+                "0790d755b80a45b8"
+            ]
+        ]
+    },
+    {
+        "id": "fn_compatibilidade",
+        "type": "function",
+        "z": "tab_voltpoint_full",
+        "name": "Calcular compatibilidade",
+        "func": "let docs = Array.isArray(msg.payload) ? msg.payload : [];\nlet veiculoId = msg.req.params.veiculo_id;\n\nlet veiculo = docs.find(doc => doc && doc._id === veiculoId && doc.tipo === \"veiculo\");\n\nif (!veiculo) {\n    msg.statusCode = 404;\n    msg.payload = { erro: \"Veículo não encontrado\" };\n    return msg;\n}\n\nlet pontos = docs.filter(doc => doc && doc.tipo === \"ponto_recarga\" && doc.ativo === true);\nlet conectoresCompativeis = veiculo.conectores_compativeis || [];\nlet potenciaMax = Number(veiculo.potencia_max_suportada_kw || 0);\n\nlet compativeis = pontos.filter(ponto =>\n    (ponto.conectores || []).some(c =>\n        conectoresCompativeis.includes(c.tipo) &&\n        Number(c.potencia_kw) <= potenciaMax\n    )\n);\n\nmsg.payload = {\n    veiculo: {\n        id: veiculo._id,\n        marca: veiculo.marca,\n        modelo: veiculo.modelo\n    },\n    pontos_compativeis: compativeis.map(ponto => ({\n        id: ponto._id,\n        nome: ponto.nome,\n        status: ponto.status,\n        latitude: ponto.latitude,\n        longitude: ponto.longitude,\n        endereco: ponto.endereco,\n        conectores: ponto.conectores || [],\n        servicos: ponto.servicos || [],\n        ultima_atualizacao: ponto.ultima_atualizacao\n    }))\n};\n\nreturn msg;",
+        "outputs": 1,
+        "noerr": 0,
+        "initialize": "",
+        "finalize": "",
+        "libs": [],
+        "x": 690,
+        "y": 380,
+        "wires": [
+            [
+                "http_resp_compatibilidade"
+            ]
+        ]
+    },
+    {
+        "id": "http_resp_compatibilidade",
+        "type": "http response",
+        "z": "tab_voltpoint_full",
+        "name": "Resposta compatibilidade",
+        "statusCode": "",
+        "headers": {},
+        "x": 960,
+        "y": 380,
+        "wires": []
+    },
+    {
+        "id": "http_post_correcao_extra",
+        "type": "http in",
+        "z": "tab_voltpoint_full",
+        "name": "POST /sugestoes-correcao",
+        "url": "/sugestoes-correcao",
+        "method": "post",
+        "upload": false,
+        "swaggerDoc": "",
+        "x": 140,
+        "y": 600,
+        "wires": [
+            [
+                "json_correcao_extra"
+            ]
+        ]
+    },
+    {
+        "id": "json_correcao_extra",
+        "type": "json",
+        "z": "tab_voltpoint_full",
+        "name": "Body para JSON",
+        "property": "payload",
+        "action": "",
+        "pretty": false,
+        "x": 380,
+        "y": 600,
+        "wires": [
+            [
+                "fn_validar_correcao_extra"
+            ]
+        ]
+    },
+    {
+        "id": "fn_validar_correcao_extra",
+        "type": "function",
+        "z": "tab_voltpoint_full",
+        "name": "Validar sugestão",
+        "func": "let body = msg.payload;\n\nif (!body || !body.ponto_id || !body.campo_sugerido || !body.valor_sugerido) {\n    msg.statusCode = 400;\n    msg.payload = {\n        erro: \"Campos obrigatórios não informados\",\n        obrigatorios: [\"ponto_id\", \"campo_sugerido\", \"valor_sugerido\"]\n    };\n    return [null, msg];\n}\n\nmsg.payload = {\n    _id: \"correcao_\" + Date.now(),\n    tipo: \"sugestao_correcao\",\n    ponto_id: body.ponto_id,\n    campo_sugerido: body.campo_sugerido,\n    valor_sugerido: body.valor_sugerido,\n    descricao: body.descricao || \"\",\n    data_envio: new Date().toISOString(),\n    status_revisao: \"pendente\"\n};\n\nreturn [msg, null];",
+        "outputs": 2,
+        "noerr": 0,
+        "x": 640,
+        "y": 600,
+        "wires": [
+            [
+                "f71f1256af920d04"
+            ],
+            [
+                "http_resp_erro_correcao_extra"
+            ]
+        ]
+    },
+    {
+        "id": "fn_resposta_correcao_extra",
+        "type": "function",
+        "z": "tab_voltpoint_full",
+        "name": "Mensagem sucesso",
+        "func": "msg.statusCode = 201;\nmsg.payload = {\n    mensagem: \"Sugestão enviada com sucesso\"\n};\nreturn msg;",
+        "outputs": 1,
+        "noerr": 0,
+        "x": 1100,
+        "y": 580,
+        "wires": [
+            [
+                "http_resp_correcao_extra"
+            ]
+        ]
+    },
+    {
+        "id": "http_resp_correcao_extra",
+        "type": "http response",
+        "z": "tab_voltpoint_full",
+        "name": "Resposta sucesso",
+        "statusCode": "",
+        "headers": {},
+        "x": 1300,
+        "y": 580,
+        "wires": []
+    },
+    {
+        "id": "http_resp_erro_correcao_extra",
+        "type": "http response",
+        "z": "tab_voltpoint_full",
+        "name": "Resposta erro",
+        "statusCode": "",
+        "headers": {},
+        "x": 880,
+        "y": 640,
+        "wires": []
+    },
+    {
+        "id": "0790d755b80a45b8",
+        "type": "cloudantplus in",
+        "z": "tab_voltpoint_full",
+        "name": "",
+        "cloudant": "10a0bdc82fc76e99",
+        "database": "voltpoint1",
+        "service": "_ext_",
+        "search": "_all_",
+        "design": "",
+        "index": "",
+        "x": 440,
+        "y": 380,
+        "wires": [
+            [
+                "fn_compatibilidade"
+            ]
+        ]
+    },
+    {
+        "id": "f71f1256af920d04",
+        "type": "cloudantplus out",
+        "z": "tab_voltpoint_full",
+        "name": "",
+        "cloudant": "10a0bdc82fc76e99",
+        "database": "voltpoint1",
+        "service": "_ext_",
+        "payonly": true,
+        "operation": "insert",
+        "x": 880,
+        "y": 580,
+        "wires": [
+            [
+                "fn_resposta_correcao_extra"
+            ]
+        ]
+    },
+    {
+        "id": "http_pontos_filtros_corrigido",
+        "type": "http in",
+        "z": "tab_voltpoint_full",
+        "name": "GET /pontos/filtros",
+        "url": "/pontos/filtros",
+        "method": "get",
+        "upload": false,
+        "swaggerDoc": "",
+        "x": 95,
+        "y": 473.75000762939453,
+        "wires": [
+            [
+                "fn_limpar_msg_filtros"
+            ]
+        ]
+    },
+    {
+        "id": "fn_limpar_msg_filtros",
+        "type": "function",
+        "z": "tab_voltpoint_full",
+        "name": "Salvar filtros e limpar msg",
+        "func": "let novaMsg = {\n    filtros: (msg.req && msg.req.query) ? msg.req.query : {},\n    res: msg.res\n};\n\nreturn novaMsg;",
+        "outputs": 1,
+        "noerr": 0,
+        "x": 365,
+        "y": 473.75000762939453,
+        "wires": [
+            [
+                "c5ccb68f982e2764"
+            ]
+        ]
+    },
+    {
+        "id": "fn_aplicar_filtros_corrigido",
+        "type": "function",
+        "z": "tab_voltpoint_full",
+        "name": "Aplicar filtros",
+        "func": "let docs = Array.isArray(msg.payload) ? msg.payload : [];\nlet q = msg.filtros || {};\n\nlet pontos = docs.filter(doc => doc && doc.tipo === \"ponto_recarga\" && doc.ativo === true);\n\nif (q.status) {\n    pontos = pontos.filter(p =>\n        String(p.status).toLowerCase() === String(q.status).toLowerCase()\n    );\n}\n\nif (q.conector) {\n    pontos = pontos.filter(p =>\n        (p.conectores || []).some(c =>\n            String(c.tipo).toLowerCase() === String(q.conector).toLowerCase()\n        )\n    );\n}\n\nif (q.potencia_min) {\n    let min = Number(q.potencia_min);\n    pontos = pontos.filter(p =>\n        (p.conectores || []).some(c => Number(c.potencia_kw) >= min)\n    );\n}\n\nif (q.servico) {\n    pontos = pontos.filter(p =>\n        (p.servicos || []).some(s =>\n            String(s).toLowerCase() === String(q.servico).toLowerCase()\n        )\n    );\n}\n\nmsg.payload = pontos.map(ponto => ({\n    id: ponto._id,\n    nome: ponto.nome,\n    status: ponto.status,\n    latitude: ponto.latitude,\n    longitude: ponto.longitude,\n    endereco: ponto.endereco,\n    conectores: ponto.conectores || [],\n    servicos: ponto.servicos || [],\n    ultima_atualizacao: ponto.ultima_atualizacao\n}));\n\nreturn msg;",
+        "outputs": 1,
+        "noerr": 0,
+        "x": 835,
+        "y": 473.75000762939453,
+        "wires": [
+            [
+                "http_resp_filtros_corrigido"
+            ]
+        ]
+    },
+    {
+        "id": "http_resp_filtros_corrigido",
+        "type": "http response",
+        "z": "tab_voltpoint_full",
+        "name": "Resposta filtros",
+        "statusCode": "",
+        "headers": {},
+        "x": 1075,
+        "y": 473.75000762939453,
+        "wires": []
+    },
+    {
+        "id": "c5ccb68f982e2764",
+        "type": "cloudantplus in",
+        "z": "tab_voltpoint_full",
+        "name": "",
+        "cloudant": "10a0bdc82fc76e99",
+        "database": "voltpoint1",
+        "service": "_ext_",
+        "search": "_all_",
+        "design": "",
+        "index": "",
+        "x": 600,
+        "y": 480,
+        "wires": [
+            [
+                "fn_aplicar_filtros_corrigido"
+            ]
+        ]
+    },
+    {
+        "id": "http_get_ponto_id",
+        "type": "http in",
+        "z": "tab_voltpoint_full",
+        "name": "GET /ponto/:id",
+        "url": "/ponto/:id",
+        "method": "get",
+        "upload": false,
+        "swaggerDoc": "",
+        "x": 100,
+        "y": 700,
+        "wires": [
+            [
+                "fn_limpar_msg_ponto_id"
+            ]
+        ]
+    },
+    {
+        "id": "fn_limpar_msg_ponto_id",
+        "type": "function",
+        "z": "tab_voltpoint_full",
+        "name": "Salvar id e limpar msg",
+        "func": "let novaMsg = {\n    ponto_id: msg.req && msg.req.params ? msg.req.params.id : null,\n    res: msg.res\n};\n\nreturn novaMsg;",
+        "outputs": 1,
+        "noerr": 0,
+        "x": 340,
+        "y": 700,
+        "wires": [
+            [
+                "a3d484b026bd4e82"
+            ]
+        ]
+    },
+    {
+        "id": "fn_buscar_ponto_id",
+        "type": "function",
+        "z": "tab_voltpoint_full",
+        "name": "Buscar ponto por id",
+        "func": "let docs = Array.isArray(msg.payload) ? msg.payload : [];\nlet pontoId = msg.ponto_id;\n\nlet ponto = docs.find(doc => doc && doc._id === pontoId && doc.tipo === \"ponto_recarga\");\n\nif (!ponto) {\n    msg.statusCode = 404;\n    msg.payload = { erro: \"Ponto não encontrado\" };\n    return msg;\n}\n\nmsg.payload = {\n    id: ponto._id,\n    nome: ponto.nome,\n    descricao: ponto.descricao || \"\",\n    status: ponto.status,\n    latitude: ponto.latitude,\n    longitude: ponto.longitude,\n    endereco: ponto.endereco,\n    conectores: ponto.conectores || [],\n    servicos: ponto.servicos || [],\n    ultima_atualizacao: ponto.ultima_atualizacao,\n    ativo: ponto.ativo\n};\n\nreturn msg;",
+        "outputs": 1,
+        "noerr": 0,
+        "x": 790,
+        "y": 700,
+        "wires": [
+            [
+                "http_resp_ponto_id"
+            ]
+        ]
+    },
+    {
+        "id": "http_resp_ponto_id",
+        "type": "http response",
+        "z": "tab_voltpoint_full",
+        "name": "Resposta detalhe do ponto",
+        "statusCode": "",
+        "headers": {},
+        "x": 1030,
+        "y": 700,
+        "wires": []
+    },
+    {
+        "id": "a3d484b026bd4e82",
+        "type": "cloudantplus in",
+        "z": "tab_voltpoint_full",
+        "name": "",
+        "cloudant": "10a0bdc82fc76e99",
+        "database": "voltpoint1",
+        "service": "_ext_",
+        "search": "_all_",
+        "design": "",
+        "index": "",
+        "x": 560,
+        "y": 700,
+        "wires": [
+            [
+                "fn_buscar_ponto_id"
+            ]
+        ]
+    },
+    {
+        "id": "10a0bdc82fc76e99",
+        "type": "cloudantplus",
+        "host": "https://f1c0dcf9-5075-4061-a1f8-2f4ca596058a-bluemix.cloudantnosqldb.appdomain.cloud",
+        "name": "EsdrasUFPA",
+        "useapikey": true
+    }
+]
