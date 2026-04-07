@@ -4,9 +4,12 @@ struct PontoView: View {
     let pontoId: String
     @StateObject private var viewModel = PontosViewModel()
     
+    @State private var mostrarPopupSucesso = false
+    @State private var mostrarPopupErro = false
+    
     var body: some View {
         Group {
-            if viewModel.carregando {
+            if viewModel.carregando && viewModel.pontoSelecionado == nil {
                 VStack(spacing: 16) {
                     ProgressView()
                     Text("Carregando informações do ponto...")
@@ -14,7 +17,7 @@ struct PontoView: View {
                 }
                 .frame(maxWidth: .infinity, maxHeight: .infinity)
                 
-            } else if let erro = viewModel.erro {
+            } else if let erro = viewModel.erro, viewModel.pontoSelecionado == nil {
                 VStack(spacing: 12) {
                     Image(systemName: "exclamationmark.triangle")
                         .font(.system(size: 40))
@@ -48,12 +51,12 @@ struct PontoView: View {
                                 .fontWeight(.bold)
                                 .multilineTextAlignment(.center)
                             
-                            Text(statusFormatado(ponto.status))
+                            Text(statusVisual(ponto))
                                 .font(.subheadline)
-                                .foregroundColor(corStatus(ponto.status))
+                                .foregroundColor(corStatusVisual(ponto))
                                 .padding(.horizontal, 12)
                                 .padding(.vertical, 6)
-                                .background(corStatus(ponto.status).opacity(0.12))
+                                .background(corStatusVisual(ponto).opacity(0.12))
                                 .clipShape(Capsule())
                         }
                         .frame(maxWidth: .infinity)
@@ -63,7 +66,6 @@ struct PontoView: View {
                             blocoTitulo("Endereço")
                             Text(ponto.endereco)
                                 .font(.body)
-                                .foregroundColor(.primary)
                         }
                         
                         if let descricao = ponto.descricao, !descricao.isEmpty {
@@ -71,7 +73,6 @@ struct PontoView: View {
                                 blocoTitulo("Descrição")
                                 Text(descricao)
                                     .font(.body)
-                                    .foregroundColor(.primary)
                             }
                         }
                         
@@ -118,6 +119,71 @@ struct PontoView: View {
                             Text(ponto.ultimaAtualizacao ?? "Não informada")
                                 .foregroundColor(.secondary)
                         }
+                        
+                        Group {
+                            blocoTitulo("Uso do ponto")
+                            
+                            if ponto.status.lowercased() == "manutencao" {
+                                Text("Este ponto está em manutenção e não pode ser ocupado.")
+                                    .foregroundColor(.orange)
+                                
+                                Button("Indisponível") {}
+                                    .frame(maxWidth: .infinity)
+                                    .padding()
+                                    .background(Color.gray.opacity(0.2))
+                                    .foregroundColor(.gray)
+                                    .cornerRadius(12)
+                                    .disabled(true)
+                            } else if ponto.ocupado == true {
+                                Button {
+                                    Task {
+                                        let sucesso = await viewModel.desocuparPonto(ponto.id)
+                                        if sucesso {
+                                            mostrarPopupSucesso = true
+                                        } else {
+                                            mostrarPopupErro = true
+                                        }
+                                    }
+                                } label: {
+                                    if viewModel.carregando {
+                                        ProgressView()
+                                            .frame(maxWidth: .infinity)
+                                            .padding()
+                                    } else {
+                                        Text("Desocupar ponto")
+                                            .frame(maxWidth: .infinity)
+                                            .padding()
+                                    }
+                                }
+                                .background(Color.orange)
+                                .foregroundColor(.white)
+                                .cornerRadius(12)
+                            } else {
+                                Button {
+                                    Task {
+                                        let sucesso = await viewModel.ocuparPonto(ponto.id)
+                                        if sucesso {
+                                            mostrarPopupSucesso = true
+                                        } else {
+                                            mostrarPopupErro = true
+                                        }
+                                    }
+                                } label: {
+                                    if viewModel.carregando {
+                                        ProgressView()
+                                            .frame(maxWidth: .infinity)
+                                            .padding()
+                                    } else {
+                                        Text("Ocupar ponto")
+                                            .frame(maxWidth: .infinity)
+                                            .padding()
+                                    }
+                                }
+                                .background(Color.green)
+                                .foregroundColor(.white)
+                                .cornerRadius(12)
+                            }
+                        }
                     }
                     .padding()
                 }
@@ -135,6 +201,16 @@ struct PontoView: View {
         .task {
             await viewModel.carregarPontoPorId(pontoId)
         }
+        .alert("Sucesso", isPresented: $mostrarPopupSucesso) {
+            Button("OK") { }
+        } message: {
+            Text(viewModel.mensagemAcao ?? "Ação realizada com sucesso.")
+        }
+        .alert("Erro", isPresented: $mostrarPopupErro) {
+            Button("OK", role: .cancel) { }
+        } message: {
+            Text(viewModel.erro ?? "Ocorreu um erro.")
+        }
     }
     
     private func blocoTitulo(_ titulo: String) -> some View {
@@ -143,25 +219,23 @@ struct PontoView: View {
             .fontWeight(.semibold)
     }
     
-    private func statusFormatado(_ status: String) -> String {
-        switch status.lowercased() {
-        case "funcionando":
-            return "Funcionando"
-        case "manutencao":
+    private func statusVisual(_ ponto: PontoRecarga) -> String {
+        if ponto.status.lowercased() == "manutencao" {
             return "Em manutenção"
-        default:
-            return status.capitalized
         }
+        if ponto.ocupado == true {
+            return "Ocupado"
+        }
+        return "Disponível"
     }
     
-    private func corStatus(_ status: String) -> Color {
-        switch status.lowercased() {
-        case "funcionando":
-            return .green
-        case "manutencao":
+    private func corStatusVisual(_ ponto: PontoRecarga) -> Color {
+        if ponto.status.lowercased() == "manutencao" {
             return .orange
-        default:
-            return .gray
         }
+        if ponto.ocupado == true {
+            return .red
+        }
+        return .green
     }
 }

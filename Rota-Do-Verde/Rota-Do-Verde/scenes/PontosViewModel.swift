@@ -7,6 +7,7 @@ final class PontosViewModel: ObservableObject {
     @Published var pontoSelecionado: PontoRecarga?
     @Published var carregando = false
     @Published var erro: String?
+    @Published var mensagemAcao: String?
     
     func carregarPontos() async {
         carregando = true
@@ -55,6 +56,42 @@ final class PontosViewModel: ObservableObject {
         }
         
         carregando = false
+    }
+    
+    func ocuparPonto(_ id: String) async -> Bool {
+        carregando = true
+        erro = nil
+        mensagemAcao = nil
+        
+        do {
+            let resposta = try await APIService.shared.ocuparPonto(id: id)
+            mensagemAcao = resposta.mensagem
+            pontoSelecionado = try await APIService.shared.buscarPontoPorId(id)
+            carregando = false
+            return true
+        } catch {
+            erro = error.localizedDescription
+            carregando = false
+            return false
+        }
+    }
+    
+    func desocuparPonto(_ id: String) async -> Bool {
+        carregando = true
+        erro = nil
+        mensagemAcao = nil
+        
+        do {
+            let resposta = try await APIService.shared.desocuparPonto(id: id)
+            mensagemAcao = resposta.mensagem
+            pontoSelecionado = try await APIService.shared.buscarPontoPorId(id)
+            carregando = false
+            return true
+        } catch {
+            erro = error.localizedDescription
+            carregando = false
+            return false
+        }
     }
     
     func limparPontoSelecionado() {
