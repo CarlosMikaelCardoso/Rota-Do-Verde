@@ -27,7 +27,7 @@ final class APIService {
     static let shared = APIService()
     
     // Troca pelo IP correto quando for testar em dispositivo físico
-    private let baseURL = "http://127.0.0.1:1880"
+    private let baseURL = "http://192.168.128.12:1880"
     
     private init() {}
     
