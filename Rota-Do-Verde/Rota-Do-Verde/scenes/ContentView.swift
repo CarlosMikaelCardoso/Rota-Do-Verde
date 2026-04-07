@@ -1,10 +1,13 @@
 import SwiftUI
 import MapKit
+import Combine
+import Foundation
 
 struct ContentView: View {
     @StateObject private var viewModel = PontosViewModel()
     @State private var selectedLocation: PontoRecarga?
     @State private var locationForNavigation: PontoRecarga?
+    @StateObject private var locationManager = LocationManager()
     
     @State private var position: MapCameraPosition = .region(
         MKCoordinateRegion(
@@ -16,8 +19,10 @@ struct ContentView: View {
     var body: some View {
         NavigationStack {
             ZStack(alignment: .top) {
-                //MARK: - Mapa
+//MARK: - Mapa
                 Map(position: $position, selection: $selectedLocation) {
+                    UserAnnotation()
+                    
                     ForEach(viewModel.pontos) { loc in
                         Marker(loc.nome, coordinate: loc.coordinate)
                             .tag(loc)
@@ -25,8 +30,7 @@ struct ContentView: View {
                 }
                 .mapStyle(.standard(emphasis: .muted))
                 .ignoresSafeArea()
-                
-                //MARK: - Picker
+//MARK: - Picker
                 Picker("Selecione um local", selection: $selectedLocation) {
                     Text("Explorar pontos").tag(nil as PontoRecarga?)
                     ForEach(viewModel.pontos) { loc in
@@ -66,22 +70,17 @@ struct ContentView: View {
 //MARK: - Botão de Centralização
 
                     Button(action: {
-                        withAnimation(.snappy) {
-                            position = .region(
-                                MKCoordinateRegion(
-                                    center: CLLocationCoordinate2D(latitude: -1.4746, longitude: -48.4534),
-                                    span: MKCoordinateSpan(latitudeDelta: 0.01, longitudeDelta: 0.01)
-                                )
-                            )
-                        }
+                    withAnimation(.snappy) {
+                    position = .userLocation(fallback: .automatic)
+                    }
                     }) {
-                        Image(systemName: "location.north.circle")
-                            .font(.title.bold())
-                            .padding()
-                            .background(Color.green)
-                            .foregroundColor(.white)
-                            .clipShape(Circle())
-                            .shadow(color: .black.opacity(0.3), radius: 5, x: 0, y: 3)
+                    Image(systemName: "location.north.circle")
+                    .font(.title.bold())
+                    .padding()
+                    .background(Color.green)
+                    .foregroundColor(.white)
+                    .clipShape(Circle())
+                    .shadow(color: .black.opacity(0.3), radius: 5, x: 0, y: 3)
                     }
                     .padding(.top, 650)
                 }
