@@ -8,10 +8,12 @@ struct ContentView: View {
     @State private var selectedLocation: PontoRecarga?
     @State private var locationForNavigation: PontoRecarga?
     @StateObject private var locationManager = LocationManager()
+    
     @State private var route: MKRoute?
     @State private var showToast: Bool = false
     @State private var distanciaRota: String = ""
     @State private var tempoRota: String = ""
+    @State private var mostrandoTelaAdicionar = false
     
     @State private var position: MapCameraPosition = .region(
         MKCoordinateRegion(
@@ -23,12 +25,10 @@ struct ContentView: View {
     var body: some View {
         NavigationStack {
             ZStack(alignment: .top) {
-                //MARK: - Mapa
+                // MARK: - Mapa
                 Map(position: $position, selection: $selectedLocation) {
-                    // Exibe o ponto azul na localização atual do usuário
                     UserAnnotation()
                     
-                    // Se a rota foi calculada, desenha uma linha azul no mapa
                     if let route {
                         MapPolyline(route)
                             .stroke(.blue, lineWidth: 5)
@@ -41,7 +41,8 @@ struct ContentView: View {
                 }
                 .mapStyle(.standard(emphasis: .muted))
                 .ignoresSafeArea()
-                //MARK: - Picker
+                
+                // MARK: - Picker
                 Picker("Selecione um local", selection: $selectedLocation) {
                     Text("Explorar pontos").tag(nil as PontoRecarga?)
                     ForEach(viewModel.pontos) { loc in
@@ -62,7 +63,8 @@ struct ContentView: View {
                         .stroke(.white.opacity(0.3), lineWidth: 1)
                 }
                 .padding(.top, -50)
-                // MARK: - Toast Flutuante de Rota
+                
+                // MARK: - Toast da rota
                 if showToast {
                     VStack {
                         Spacer()
@@ -84,10 +86,9 @@ struct ContentView: View {
                         .foregroundColor(.primary)
                         .clipShape(Capsule())
                         .shadow(color: .black.opacity(0.3), radius: 10, x: 0, y: 5)
-                        .padding(.bottom, 60) // Evita sobrepor outros botões
+                        .padding(.bottom, 60)
                         .transition(.move(edge: .bottom).combined(with: .opacity))
                         .onAppear {
-                            // Esconde o toast automaticamente após 6 segundos
                             DispatchQueue.main.asyncAfter(deadline: .now() + 15) {
                                 withAnimation {
                                     showToast = false
@@ -95,50 +96,56 @@ struct ContentView: View {
                             }
                         }
                     }
-                    .zIndex(1) // Garante que fique na frente do mapa
+                    .zIndex(1)
                 }
-                //MARK: - Botão de adição de pontos
-                HStack {
-                    Button(action: {
-                        if let userCoord = locationManager.userLocation {
-                            Task {
-                                await calcularRotaParaEnderecoTexto(origem: userCoord, endereco: "AV. Nazaré, Belém - PA")
+                
+                // MARK: - Botões flutuantes
+                VStack {
+                    Spacer()
+                    
+                    HStack {
+                        Spacer()
+                        
+                        VStack(spacing: 16) {
+                            // Botão adicionar ponto
+                            Button(action: {
+                                mostrandoTelaAdicionar = true
+                            }) {
+                                Image(systemName: "plus")
+                                    .font(.title.bold())
+                                    .padding()
+                                    .background(Color.green)
+                                    .foregroundColor(.white)
+                                    .clipShape(Circle())
+                                    .shadow(color: .black.opacity(0.3), radius: 5, x: 0, y: 3)
+                            }
+                            
+                            // Botão centralizar no usuário
+                            Button(action: {
+                                withAnimation(.snappy) {
+                                    position = .userLocation(fallback: .automatic)
+                                }
+                            }) {
+                                Image(systemName: "location.north.circle")
+                                    .font(.title.bold())
+                                    .padding()
+                                    .background(Color.green)
+                                    .foregroundColor(.white)
+                                    .clipShape(Circle())
+                                    .shadow(color: .black.opacity(0.3), radius: 5, x: 0, y: 3)
                             }
                         }
-                    }) {
-                        Image(systemName: "plus")
-                            .font(.title.bold())
-                            .padding()
-                            .background(Color.green)
-                            .foregroundColor(.white)
-                            .clipShape(Circle())
-                            .shadow(color: .black.opacity(0.3), radius: 5, x: 0, y: 3)
+                        .padding(.trailing, 20)
+                        .padding(.bottom, 30)
                     }
-                    .padding(.top, 650)
-                    .padding(.trailing, 220)
-                    //MARK: - Botão de Centralização
-                    
-                    Button(action: {
-                        withAnimation(.snappy) {
-                            position = .userLocation(fallback: .automatic)
-                        }
-                    }) {
-                        Image(systemName: "location.north.circle")
-                            .font(.title.bold())
-                            .padding()
-                            .background(Color.green)
-                            .foregroundColor(.white)
-                            .clipShape(Circle())
-                            .shadow(color: .black.opacity(0.3), radius: 5, x: 0, y: 3)
-                    }
-                    .padding(.top, 650)
                 }
             }
             
-            //MARK: - Lógica de transição entre pickers
+            // MARK: - Lógica de seleção do ponto
             .onChange(of: selectedLocation) { _, newLocation in
                 guard let newLocation else {
-                    route = nil // Limpa a linha se clicar fora do ponto
+                    route = nil
+                    showToast = false
                     return
                 }
                 
@@ -151,7 +158,6 @@ struct ContentView: View {
                     )
                 }
                 
-                // Dispara o cálculo da rota de forma assíncrona
                 if let userCoord = locationManager.userLocation {
                     Task {
                         await calcularRota(origem: userCoord, destino: newLocation.coordinate)
@@ -165,6 +171,11 @@ struct ContentView: View {
             .navigationDestination(item: $locationForNavigation) { local in
                 PontoView(pontoId: local.id)
             }
+            .sheet(isPresented: $mostrandoTelaAdicionar) {
+                AdicionarPontoView {
+                    await viewModel.carregarPontos()
+                }
+            }
             .task {
                 await viewModel.carregarPontos()
             }
@@ -172,70 +183,62 @@ struct ContentView: View {
     }
     
     private func calcularRota(origem: CLLocationCoordinate2D, destino: CLLocationCoordinate2D) async {
-            let request = MKDirections.Request()
-            
-            let locationOrigem = CLLocation(latitude: origem.latitude, longitude: origem.longitude)
-            let locationDestino = CLLocation(latitude: destino.latitude, longitude: destino.longitude)
-            
-            request.source = MKMapItem(location: locationOrigem, address: nil)
-            request.destination = MKMapItem(location: locationDestino, address: nil)
-            request.transportType = .automobile
-            
-            let directions = MKDirections(request: request)
-            
-            do {
-                let response = try await directions.calculate()
-                if let primeiraRota = response.routes.first {
-                    withAnimation(.easeInOut(duration: 1.0)) {
-                        self.route = primeiraRota
-                        // 1. Altera o zoom e enquadra o mapa com base no trajeto completo da linha
-                        self.position = .rect(primeiraRota.polyline.boundingMapRect)
-                        // 2. Formatação da distância em Km
-                        let distanciaEmKm = primeiraRota.distance / 1000.0
-                        self.distanciaRota = String(format: "%.1f km", distanciaEmKm)
-                        // 3. Formatação do tempo em Horas/Minutos
-                        let tempoEmMinutos = Int(primeiraRota.expectedTravelTime / 60)
-                        if tempoEmMinutos >= 60 {
-                            let horas = tempoEmMinutos / 60
-                            let minutos = tempoEmMinutos % 60
-                            self.tempoRota = "\(horas)h \(minutos)min"
-                        } else {
-                            self.tempoRota = "\(tempoEmMinutos) min"
-                        }
-                        
-                        // 4. Exibe o Toast
-                        self.showToast = true
+        let request = MKDirections.Request()
+        
+        let locationOrigem = CLLocation(latitude: origem.latitude, longitude: origem.longitude)
+        let locationDestino = CLLocation(latitude: destino.latitude, longitude: destino.longitude)
+        
+        request.source = MKMapItem(location: locationOrigem, address: nil)
+        request.destination = MKMapItem(location: locationDestino, address: nil)
+        request.transportType = .automobile
+        
+        let directions = MKDirections(request: request)
+        
+        do {
+            let response = try await directions.calculate()
+            if let primeiraRota = response.routes.first {
+                withAnimation(.easeInOut(duration: 1.0)) {
+                    self.route = primeiraRota
+                    self.position = .rect(primeiraRota.polyline.boundingMapRect)
+                    
+                    let distanciaEmKm = primeiraRota.distance / 1000.0
+                    self.distanciaRota = String(format: "%.1f km", distanciaEmKm)
+                    
+                    let tempoEmMinutos = Int(primeiraRota.expectedTravelTime / 60)
+                    if tempoEmMinutos >= 60 {
+                        let horas = tempoEmMinutos / 60
+                        let minutos = tempoEmMinutos % 60
+                        self.tempoRota = "\(horas)h \(minutos)min"
+                    } else {
+                        self.tempoRota = "\(tempoEmMinutos) min"
                     }
+                    
+                    self.showToast = true
                 }
-            } catch {
-                print("Erro ao calcular a rota: \(error.localizedDescription)")
             }
+        } catch {
+            print("Erro ao calcular a rota: \(error.localizedDescription)")
         }
+    }
     
     private func calcularRotaParaEnderecoTexto(origem: CLLocationCoordinate2D, endereco: String) async {
-            let searchRequest = MKLocalSearch.Request()
-            searchRequest.naturalLanguageQuery = endereco
+        let searchRequest = MKLocalSearch.Request()
+        searchRequest.naturalLanguageQuery = endereco
+        
+        let search = MKLocalSearch(request: searchRequest)
+        
+        do {
+            let response = try await search.start()
             
-            let search = MKLocalSearch(request: searchRequest)
-            
-            do {
-                let response = try await search.start()
-                
-                // Pega a primeira correspondência e acessa a coordenada diretamente, sem o '?'
-                if let mapItem = response.mapItems.first {
-                    
-                    let destinoCoordinate = mapItem.location.coordinate
-                    
-                    // Usa a coordenada extraída para traçar a rota
-                    await calcularRota(origem: origem, destino: destinoCoordinate)
-                }
-            } catch {
-                print("Endereço fixo não encontrado ou erro na busca: \(error.localizedDescription)")
+            if let mapItem = response.mapItems.first {
+                let destinoCoordinate = mapItem.location.coordinate
+                await calcularRota(origem: origem, destino: destinoCoordinate)
             }
+        } catch {
+            print("Endereço fixo não encontrado ou erro na busca: \(error.localizedDescription)")
         }
+    }
 }
-
-
 
 #Preview {
     ContentView()
