@@ -13,12 +13,3 @@ struct CriarSugestaoCorrecaoRequest: Codable {
         case descricao
     }
 }
-
-struct MensagemResponse: Codable {
-    let mensagem: String
-}
-
-struct ErroResponse: Codable {
-    let erro: String
-    let obrigatorios: [String]?
-}

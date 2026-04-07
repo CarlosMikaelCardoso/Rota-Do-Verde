@@ -26,14 +26,12 @@ enum APIError: Error, LocalizedError {
 final class APIService {
     static let shared = APIService()
     
-    // Troca aqui pelo IP da máquina onde o Node-RED está rodando
-    // Se estiver no simulador do iPhone e Node-RED na tua máquina:
-    // ex: http://127.0.0.1:1880 ou http://192.168.x.x:1880
-    private let baseURL = "http://192.168.128.12:1880"
+    // Troca pelo IP correto quando for testar em dispositivo físico
+    private let baseURL = "http://127.0.0.1:1880"
     
     private init() {}
     
-    // MARK: - GET genérico
+    // MARK: - GET
     private func fetch<T: Decodable>(_ endpoint: String, responseType: T.Type) async throws -> T {
         guard let url = URL(string: baseURL + endpoint) else {
             throw APIError.invalidURL
@@ -53,14 +51,13 @@ final class APIService {
         }
         
         do {
-            let decoder = JSONDecoder()
-            return try decoder.decode(T.self, from: data)
+            return try JSONDecoder().decode(T.self, from: data)
         } catch {
             throw APIError.decodingError
         }
     }
     
-    // MARK: - POST genérico
+    // MARK: - POST
     private func post<T: Encodable, U: Decodable>(
         _ endpoint: String,
         body: T,
@@ -89,8 +86,75 @@ final class APIService {
         }
         
         do {
-            let decoder = JSONDecoder()
-            return try decoder.decode(U.self, from: data)
+            return try JSONDecoder().decode(U.self, from: data)
+        } catch {
+            throw APIError.decodingError
+        }
+    }
+    
+    // MARK: - PATCH
+    private func patch<T: Encodable, U: Decodable>(
+        _ endpoint: String,
+        body: T,
+        responseType: U.Type
+    ) async throws -> U {
+        guard let url = URL(string: baseURL + endpoint) else {
+            throw APIError.invalidURL
+        }
+        
+        var request = URLRequest(url: url)
+        request.httpMethod = "PATCH"
+        request.setValue("application/json", forHTTPHeaderField: "Content-Type")
+        request.httpBody = try JSONEncoder().encode(body)
+        
+        let (data, response) = try await URLSession.shared.data(for: request)
+        
+        guard let httpResponse = response as? HTTPURLResponse else {
+            throw APIError.invalidResponse
+        }
+        
+        guard (200...299).contains(httpResponse.statusCode) else {
+            if let apiError = try? JSONDecoder().decode(ErroResponse.self, from: data) {
+                throw APIError.serverError(apiError.erro)
+            }
+            throw APIError.serverError("Erro HTTP: \(httpResponse.statusCode)")
+        }
+        
+        do {
+            return try JSONDecoder().decode(U.self, from: data)
+        } catch {
+            throw APIError.decodingError
+        }
+    }
+    
+    // MARK: - POST sem body
+    private func postWithoutBody<U: Decodable>(
+        _ endpoint: String,
+        responseType: U.Type
+    ) async throws -> U {
+        guard let url = URL(string: baseURL + endpoint) else {
+            throw APIError.invalidURL
+        }
+        
+        var request = URLRequest(url: url)
+        request.httpMethod = "POST"
+        request.setValue("application/json", forHTTPHeaderField: "Content-Type")
+        
+        let (data, response) = try await URLSession.shared.data(for: request)
+        
+        guard let httpResponse = response as? HTTPURLResponse else {
+            throw APIError.invalidResponse
+        }
+        
+        guard (200...299).contains(httpResponse.statusCode) else {
+            if let apiError = try? JSONDecoder().decode(ErroResponse.self, from: data) {
+                throw APIError.serverError(apiError.erro)
+            }
+            throw APIError.serverError("Erro HTTP: \(httpResponse.statusCode)")
+        }
+        
+        do {
+            return try JSONDecoder().decode(U.self, from: data)
         } catch {
             throw APIError.decodingError
         }
@@ -158,6 +222,22 @@ final class APIService {
         } catch {
             throw APIError.decodingError
         }
+    }
+    
+    func criarPonto(_ ponto: CriarPontoRequest) async throws -> MensagemResponse {
+        try await post("/pontos", body: ponto, responseType: MensagemResponse.self)
+    }
+    
+    func editarPonto(id: String, body: EditarPontoRequest) async throws -> MensagemResponse {
+        try await patch("/ponto/\(id)", body: body, responseType: MensagemResponse.self)
+    }
+    
+    func ocuparPonto(id: String) async throws -> MensagemResponse {
+        try await postWithoutBody("/ponto/\(id)/ocupar", responseType: MensagemResponse.self)
+    }
+    
+    func desocuparPonto(id: String) async throws -> MensagemResponse {
+        try await postWithoutBody("/ponto/\(id)/desocupar", responseType: MensagemResponse.self)
     }
     
     // MARK: - Veículos
