@@ -16,6 +16,7 @@ struct ContentView: View {
     var body: some View {
         NavigationStack {
             ZStack(alignment: .top) {
+                //MARK: - Mapa
                 Map(position: $position, selection: $selectedLocation) {
                     ForEach(viewModel.pontos) { loc in
                         Marker(loc.nome, coordinate: loc.coordinate)
@@ -25,8 +26,9 @@ struct ContentView: View {
                 .mapStyle(.standard(emphasis: .muted))
                 .ignoresSafeArea()
                 
+                //MARK: - Picker
                 Picker("Selecione um local", selection: $selectedLocation) {
-                    Text("📍 Explorar pontos").tag(nil as PontoRecarga?)
+                    Text("Explorar pontos").tag(nil as PontoRecarga?)
                     ForEach(viewModel.pontos) { loc in
                         Text(loc.nome).tag(loc as PontoRecarga?)
                     }
@@ -44,22 +46,48 @@ struct ContentView: View {
                     Capsule()
                         .stroke(.white.opacity(0.3), lineWidth: 1)
                 }
-                .padding(.top, 16)
+                .padding(.top, -50)
                 
-                Button(action: {
-                    print("Botão Adicionar pressionado - Implementar destino depois")
-                }) {
-                    Image(systemName: "plus")
-                        .font(.title.bold())
-                        .padding()
-                        .background(Color.green)
-                        .foregroundColor(.white)
-                        .clipShape(Circle())
-                        .shadow(color: .black.opacity(0.3), radius: 5, x: 0, y: 3)
+//MARK: - Botão de adição de pontos
+                HStack {
+                    Button(action: {
+                        print("Botão Adicionar pressionado")
+                    }) {
+                        Image(systemName: "plus")
+                            .font(.title.bold())
+                            .padding()
+                            .background(Color.green)
+                            .foregroundColor(.white)
+                            .clipShape(Circle())
+                            .shadow(color: .black.opacity(0.3), radius: 5, x: 0, y: 3)
+                    }
+                    .padding(.top, 650)
+                    .padding(.trailing, 220)
+//MARK: - Botão de Centralização
+
+                    Button(action: {
+                        withAnimation(.snappy) {
+                            position = .region(
+                                MKCoordinateRegion(
+                                    center: CLLocationCoordinate2D(latitude: -1.4746, longitude: -48.4534),
+                                    span: MKCoordinateSpan(latitudeDelta: 0.01, longitudeDelta: 0.01)
+                                )
+                            )
+                        }
+                    }) {
+                        Image(systemName: "location.north.circle")
+                            .font(.title.bold())
+                            .padding()
+                            .background(Color.green)
+                            .foregroundColor(.white)
+                            .clipShape(Circle())
+                            .shadow(color: .black.opacity(0.3), radius: 5, x: 0, y: 3)
+                    }
+                    .padding(.top, 650)
                 }
-                .padding(.top, 650)
-                .padding(.trailing, 260)
             }
+            
+//MARK: - Lógica de transição entre pickers
             .onChange(of: selectedLocation) { _, newLocation in
                 guard let newLocation else { return }
                 
@@ -82,8 +110,6 @@ struct ContentView: View {
             .task {
                 await viewModel.carregarPontos()
             }
-            .navigationTitle("Rota do Verde")
-            .navigationBarTitleDisplayMode(.inline)
         }
     }
 }
