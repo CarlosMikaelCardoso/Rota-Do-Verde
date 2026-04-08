@@ -4,6 +4,8 @@ import Combine
 import Foundation
 
 struct ContentView: View {
+    @State private var animatedCoordinates: [CLLocationCoordinate2D] = []
+    
     @StateObject private var viewModel = PontosViewModel()
     @State private var selectedLocation: PontoRecarga?
     @State private var locationForNavigation: PontoRecarga?
@@ -29,9 +31,13 @@ struct ContentView: View {
                 Map(position: $position, selection: $selectedLocation) {
                     UserAnnotation()
                     
-                    if let route {
-                        MapPolyline(route)
-                            .stroke(.blue, lineWidth: 5)
+                    // Substitua a lógica de MapPolyline(route) por esta:
+                    if !animatedCoordinates.isEmpty {
+                        MapPolyline(coordinates: animatedCoordinates)
+                            .stroke(
+                                LinearGradient(colors: [.green, .cyan], startPoint: .leading, endPoint: .trailing),
+                                style: StrokeStyle(lineWidth: 6, lineCap: .round, lineJoin: .round)
+                            )
                     }
                     
                     ForEach(viewModel.pontos) { loc in
@@ -142,7 +148,6 @@ struct ContentView: View {
             }
             
             // MARK: - Lógica de seleção do ponto
-            // 1. No .onChange(of: selectedLocation), REMOVA ou COMENTE a parte do cálculo automático:
             .onChange(of: selectedLocation) { _, newLocation in
                 guard let newLocation else {
                     route = nil
@@ -164,7 +169,6 @@ struct ContentView: View {
                 }
             }
 
-            // 2. Atualize o .navigationDestination para lidar com o callback:
             .navigationDestination(item: $locationForNavigation) { local in
                 PontoView(pontoId: local.id) {
                     // Ação quando o botão de rota é clicado na PontoView
@@ -189,6 +193,7 @@ struct ContentView: View {
         }
     }
     
+// MARK: - Calcular Rota
     private func calcularRota(origem: CLLocationCoordinate2D, destino: CLLocationCoordinate2D) async {
         let request = MKDirections.Request()
         
@@ -204,23 +209,54 @@ struct ContentView: View {
         do {
             let response = try await directions.calculate()
             if let primeiraRota = response.routes.first {
-                withAnimation(.easeInOut(duration: 1.0)) {
-                    self.route = primeiraRota
-                    self.position = .rect(primeiraRota.polyline.boundingMapRect)
+                // 1. Ajusta a câmera imediatamente
+                withAnimation(.snappy(duration: 0.8)) {
+                    self.position = .rect(primeiraRota.polyline.boundingMapRect.insetBy(dx: -1200, dy: -1200))
+                }
+                
+                // Textos do Toast
+                let distanciaEmKm = primeiraRota.distance / 1000.0
+                self.distanciaRota = String(format: "%.1f km", distanciaEmKm)
+                
+                let tempoEmMinutos = Int(primeiraRota.expectedTravelTime / 60)
+                if tempoEmMinutos >= 60 {
+                    let horas = tempoEmMinutos / 60
+                    let minutos = tempoEmMinutos % 60
+                    self.tempoRota = "\(horas)h \(minutos)min"
+                } else {
+                    self.tempoRota = "\(tempoEmMinutos) min"
+                }
+                
+                // 2. Extrai os pontos e faz a animação da cobra
+                let allCoords = primeiraRota.polyline.coordinates
+                self.animatedCoordinates = [] // Reseta a linha anterior
+                
+                Task {
+                    let duracaoDesejada: TimeInterval = 6.0
+                    let taxaDeFrames = 0.06 // ~30 atualizações por segundo
+                    let totalPassos = Int(duracaoDesejada / taxaDeFrames)
+                    let pontosPorPasso = max(2, allCoords.count / totalPassos)
                     
-                    let distanciaEmKm = primeiraRota.distance / 1000.0
-                    self.distanciaRota = String(format: "%.1f km", distanciaEmKm)
-                    
-                    let tempoEmMinutos = Int(primeiraRota.expectedTravelTime / 60)
-                    if tempoEmMinutos >= 60 {
-                        let horas = tempoEmMinutos / 60
-                        let minutos = tempoEmMinutos % 60
-                        self.tempoRota = "\(horas)h \(minutos)min"
-                    } else {
-                        self.tempoRota = "\(tempoEmMinutos) min"
+                    for step in 0..<totalPassos {
+                        let limiteIndex = min((step + 1) * pontosPorPasso, allCoords.count)
+                        
+                        // Atualiza a interface com a nova fatia da rota
+                        self.animatedCoordinates = Array(allCoords[0..<limiteIndex])
+                        
+                        // Pausa para o próximo frame
+                        try? await Task.sleep(nanoseconds: UInt64(taxaDeFrames * 1_000_000_000))
+                        
+                        // Se já desenhou tudo, para o loop
+                        if limiteIndex >= allCoords.count { break }
                     }
                     
-                    self.showToast = true
+                    // Garante que 100% da rota seja renderizada no final
+                    self.animatedCoordinates = allCoords
+                    
+                    // Mostra o Toast só quando a cobra chegar no destino
+                    withAnimation {
+                        self.showToast = true
+                    }
                 }
             }
         } catch {
@@ -228,6 +264,7 @@ struct ContentView: View {
         }
     }
     
+// MARK: - Calcular Rota pelo Endereço
     private func calcularRotaParaEnderecoTexto(origem: CLLocationCoordinate2D, endereco: String) async {
         let searchRequest = MKLocalSearch.Request()
         searchRequest.naturalLanguageQuery = endereco
@@ -244,6 +281,14 @@ struct ContentView: View {
         } catch {
             print("Endereço fixo não encontrado ou erro na busca: \(error.localizedDescription)")
         }
+    }
+}
+
+extension MKPolyline {
+    var coordinates: [CLLocationCoordinate2D] {
+        var coords = [CLLocationCoordinate2D](repeating: kCLLocationCoordinate2DInvalid, count: pointCount)
+        getCoordinates(&coords, range: NSRange(location: 0, length: pointCount))
+        return coords
     }
 }
 
