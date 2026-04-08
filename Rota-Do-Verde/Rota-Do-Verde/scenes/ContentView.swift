@@ -142,6 +142,7 @@ struct ContentView: View {
             }
             
             // MARK: - Lógica de seleção do ponto
+            // 1. No .onChange(of: selectedLocation), REMOVA ou COMENTE a parte do cálculo automático:
             .onChange(of: selectedLocation) { _, newLocation in
                 guard let newLocation else {
                     route = nil
@@ -158,18 +159,24 @@ struct ContentView: View {
                     )
                 }
                 
-                if let userCoord = locationManager.userLocation {
-                    Task {
-                        await calcularRota(origem: userCoord, destino: newLocation.coordinate)
-                    }
-                }
-                
                 DispatchQueue.main.asyncAfter(deadline: .now() + 0.6) {
                     locationForNavigation = newLocation
                 }
             }
+
+            // 2. Atualize o .navigationDestination para lidar com o callback:
             .navigationDestination(item: $locationForNavigation) { local in
-                PontoView(pontoId: local.id)
+                PontoView(pontoId: local.id) {
+                    // Ação quando o botão de rota é clicado na PontoView
+                    locationForNavigation = nil // Fecha a PontoView voltando ao mapa
+                    if let userCoord = locationManager.userLocation {
+                        Task {
+                            // Pequeno delay para a animação de volta ser suave antes de traçar a rota
+                            try? await Task.sleep(nanoseconds: 500_000_000)
+                            await calcularRota(origem: userCoord, destino: local.coordinate)
+                        }
+                    }
+                }
             }
             .sheet(isPresented: $mostrandoTelaAdicionar) {
                 AdicionarPontoView {
