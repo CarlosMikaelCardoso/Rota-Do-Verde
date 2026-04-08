@@ -36,170 +36,179 @@ struct PontoView: View {
                 .frame(maxWidth: .infinity, maxHeight: .infinity)
                 
             } else if let ponto = viewModel.pontoSelecionado {
-                ScrollView {
-                    VStack(alignment: .leading, spacing: 24) {
-                        
-                        VStack(spacing: 12) {
-                            Image(systemName: "bolt.car.circle.fill")
-                                .resizable()
-                                .scaledToFit()
-                                .frame(width: 100, height: 100)
-                                .foregroundColor(.green)
-                                .frame(maxWidth: .infinity)
+                // ZStack adicionado para permitir o botão flutuante no canto
+                ZStack(alignment: .bottomTrailing) {
+                    ScrollView {
+                        VStack(alignment: .leading, spacing: 24) {
                             
-                            Text(ponto.nome)
-                                .font(.title)
-                                .fontWeight(.bold)
-                                .multilineTextAlignment(.center)
-                            
-                            Text(statusVisual(ponto))
-                                .font(.subheadline)
-                                .foregroundColor(corStatusVisual(ponto))
-                                .padding(.horizontal, 12)
-                                .padding(.vertical, 6)
-                                .background(corStatusVisual(ponto).opacity(0.12))
-                                .clipShape(Capsule())
-                        }
-                        .frame(maxWidth: .infinity)
-                        .padding(.top)
-                        
-                        Group {
-                            blocoTitulo("Endereço")
-                            Text(ponto.endereco)
-                                .font(.body)
-                        }
-                        
-                        if let descricao = ponto.descricao, !descricao.isEmpty {
-                            Group {
-                                blocoTitulo("Descrição")
-                                Text(descricao)
-                                    .font(.body)
-                            }
-                        }
-                        
-                        Group {
-                            blocoTitulo("Conectores")
-                            
-                            VStack(alignment: .leading, spacing: 10) {
-                                ForEach(Array(ponto.conectores.enumerated()), id: \.offset) { _, conector in
-                                    HStack {
-                                        Text(conector.tipo)
-                                            .fontWeight(.medium)
-                                        Spacer()
-                                        Text("\(conector.potenciaKW) kW")
-                                            .foregroundColor(.secondary)
-                                    }
-                                    .padding()
-                                    .background(Color(.secondarySystemBackground))
-                                    .cornerRadius(12)
-                                }
-                            }
-                        }
-                        
-                        Group {
-                            blocoTitulo("Serviços")
-                            
-                            if ponto.servicos.isEmpty {
-                                Text("Nenhum serviço informado")
-                                    .foregroundColor(.secondary)
-                            } else {
-                                VStack(alignment: .leading, spacing: 8) {
-                                    ForEach(ponto.servicos, id: \.self) { servico in
-                                        HStack(spacing: 8) {
-                                            Image(systemName: "checkmark.circle.fill")
-                                                .foregroundColor(.green)
-                                            Text(servico.capitalized)
-                                        }
-                                    }
-                                }
-                            }
-                        }
-                        
-                        Group {
-                            blocoTitulo("Última atualização")
-                            Text(ponto.ultimaAtualizacao ?? "Não informada")
-                                .foregroundColor(.secondary)
-                        }
-// MARK: - Botão Traçar Rota (Inserido no topo ou antes das ações)
-                        Button {
-                            onRouteRequested?()
-                        } label: {
-                            HStack {
-                                Image(systemName: "arrow.triangle.turn.up.right.diamond.fill")
-                                Text("Traçar Rota até este local")
+                            VStack(spacing: 12) {
+                                Image(systemName: "bolt.car.circle.fill")
+                                    .resizable()
+                                    .scaledToFit()
+                                    .frame(width: 100, height: 100)
+                                    .foregroundColor(.green)
+                                    .frame(maxWidth: .infinity)
+                                
+                                Text(ponto.nome)
+                                    .font(.title)
+                                    .fontWeight(.bold)
+                                    .multilineTextAlignment(.center)
+                                
+                                Text(statusVisual(ponto))
+                                    .font(.subheadline)
+                                    .foregroundColor(corStatusVisual(ponto))
+                                    .padding(.horizontal, 12)
+                                    .padding(.vertical, 6)
+                                    .background(corStatusVisual(ponto).opacity(0.12))
+                                    .clipShape(Capsule())
                             }
                             .frame(maxWidth: .infinity)
-                            .padding()
-                            .background(Color.blue)
-                            .foregroundColor(.white)
-                            .cornerRadius(12)
-                        }
-                        Group {
-                            blocoTitulo("Uso do ponto")
+                            .padding(.top)
                             
-                            if ponto.status.lowercased() == "manutencao" {
-                                Text("Este ponto está em manutenção e não pode ser ocupado.")
-                                    .foregroundColor(.orange)
-                                
-                                Button("Indisponível") {}
-                                    .frame(maxWidth: .infinity)
-                                    .padding()
-                                    .background(Color.gray.opacity(0.2))
-                                    .foregroundColor(.gray)
-                                    .cornerRadius(12)
-                                    .disabled(true)
-                            } else if ponto.ocupado == true {
-                                Button {
-                                    Task {
-                                        let sucesso = await viewModel.desocuparPonto(ponto.id)
-                                        if sucesso {
-                                            mostrarPopupSucesso = true
-                                        } else {
-                                            mostrarPopupErro = true
-                                        }
-                                    }
-                                } label: {
-                                    if viewModel.carregando {
-                                        ProgressView()
-                                            .frame(maxWidth: .infinity)
-                                            .padding()
-                                    } else {
-                                        Text("Desocupar ponto")
-                                            .frame(maxWidth: .infinity)
-                                            .padding()
-                                    }
-                                }
-                                .background(Color.orange)
-                                .foregroundColor(.white)
-                                .cornerRadius(12)
-                            } else {
-                                Button {
-                                    Task {
-                                        let sucesso = await viewModel.ocuparPonto(ponto.id)
-                                        if sucesso {
-                                            mostrarPopupSucesso = true
-                                        } else {
-                                            mostrarPopupErro = true
-                                        }
-                                    }
-                                } label: {
-                                    if viewModel.carregando {
-                                        ProgressView()
-                                            .frame(maxWidth: .infinity)
-                                            .padding()
-                                    } else {
-                                        Text("Ocupar ponto")
-                                            .frame(maxWidth: .infinity)
-                                            .padding()
-                                    }
-                                }
-                                .background(Color.green)
-                                .foregroundColor(.white)
-                                .cornerRadius(12)
+                            Group {
+                                blocoTitulo("Endereço")
+                                Text(ponto.endereco)
+                                    .font(.body)
                             }
+                            
+                            if let descricao = ponto.descricao, !descricao.isEmpty {
+                                Group {
+                                    blocoTitulo("Descrição")
+                                    Text(descricao)
+                                        .font(.body)
+                                }
+                            }
+                            
+                            Group {
+                                blocoTitulo("Conectores")
+                                
+                                VStack(alignment: .leading, spacing: 10) {
+                                    ForEach(Array(ponto.conectores.enumerated()), id: \.offset) { _, conector in
+                                        HStack {
+                                            Text(conector.tipo)
+                                                .fontWeight(.medium)
+                                            Spacer()
+                                            Text("\(conector.potenciaKW) kW")
+                                                .foregroundColor(.secondary)
+                                        }
+                                        .padding()
+                                        .background(Color(.secondarySystemBackground))
+                                        .cornerRadius(12)
+                                    }
+                                }
+                            }
+                            
+                            Group {
+                                blocoTitulo("Serviços")
+                                
+                                if ponto.servicos.isEmpty {
+                                    Text("Nenhum serviço informado")
+                                        .foregroundColor(.secondary)
+                                } else {
+                                    VStack(alignment: .leading, spacing: 8) {
+                                        ForEach(ponto.servicos, id: \.self) { servico in
+                                            HStack(spacing: 8) {
+                                                Image(systemName: "checkmark.circle.fill")
+                                                    .foregroundColor(.green)
+                                                Text(servico.capitalized)
+                                            }
+                                        }
+                                    }
+                                }
+                            }
+                            
+                            Group {
+                                blocoTitulo("Última atualização")
+                                Text(ponto.ultimaAtualizacao ?? "Não informada")
+                                    .foregroundColor(.secondary)
+                            }
+                            
+                            Group {
+                                blocoTitulo("Uso do ponto")
+                                
+                                if ponto.status.lowercased() == "manutencao" {
+                                    Text("Este ponto está em manutenção e não pode ser ocupado.")
+                                        .foregroundColor(.orange)
+                                    
+                                    Button("Indisponível") {}
+                                        .frame(maxWidth: .infinity)
+                                        .padding()
+                                        .background(Color.gray.opacity(0.2))
+                                        .foregroundColor(.gray)
+                                        .cornerRadius(12)
+                                        .disabled(true)
+                                } else if ponto.ocupado == true {
+                                    Button {
+                                        Task {
+                                            let sucesso = await viewModel.desocuparPonto(ponto.id)
+                                            if sucesso {
+                                                mostrarPopupSucesso = true
+                                            } else {
+                                                mostrarPopupErro = true
+                                            }
+                                        }
+                                    } label: {
+                                        if viewModel.carregando {
+                                            ProgressView()
+                                                .frame(maxWidth: .infinity)
+                                                .padding()
+                                        } else {
+                                            Text("Desocupar ponto")
+                                                .frame(maxWidth: .infinity)
+                                                .padding()
+                                        }
+                                    }
+                                    .background(Color.orange)
+                                    .foregroundColor(.white)
+                                    .cornerRadius(12)
+                                } else {
+                                    Button {
+                                        Task {
+                                            let sucesso = await viewModel.ocuparPonto(ponto.id)
+                                            if sucesso {
+                                                mostrarPopupSucesso = true
+                                            } else {
+                                                mostrarPopupErro = true
+                                            }
+                                        }
+                                    } label: {
+                                        if viewModel.carregando {
+                                            ProgressView()
+                                                .frame(maxWidth: .infinity)
+                                                .padding()
+                                        } else {
+                                            Text("Ocupar ponto")
+                                                .frame(maxWidth: .infinity)
+                                                .padding()
+                                        }
+                                    }
+                                    .background(Color.green)
+                                    .foregroundColor(.white)
+                                    .cornerRadius(12)
+                                }
+                            }
+                            
+                            // Espaçamento no fim da rolagem para o botão flutuante não cobrir nada importante
+                            Spacer().frame(height: 80)
                         }
+                        .padding()
                     }
-                    .padding()
+                    
+                    // MARK: - Botão Flutuante de Traçar Rota
+                    Button {
+                        onRouteRequested?()
+                    } label: {
+                        // Voltei para o ícone que já estava funcionando no seu código original
+                        Image(systemName: "arrow.triangle.turn.up.right.diamond.fill")
+                            .font(.system(size: 24, weight: .bold))
+                            .foregroundColor(.white)
+                            .frame(width: 60, height: 60)
+                            .background(Color.blue)
+                            .clipShape(Circle())
+                            .shadow(color: .black.opacity(0.3), radius: 5, x: 0, y: 3)
+                    }
+                    .padding(.trailing, 20)
+                    .padding(.bottom, 20)
                 }
                 .navigationTitle(ponto.nome)
                 .navigationBarTitleDisplayMode(.inline)
