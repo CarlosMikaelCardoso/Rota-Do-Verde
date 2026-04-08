@@ -14,6 +14,7 @@ struct ContentView: View {
     @State private var distanciaRota: String = ""
     @State private var tempoRota: String = ""
     @State private var mostrandoTelaAdicionar = false
+    @State private var mostrandoFiltros = false
     
     @State private var position: MapCameraPosition = .region(
         MKCoordinateRegion(
@@ -42,28 +43,28 @@ struct ContentView: View {
                 .mapStyle(.standard(emphasis: .muted))
                 .ignoresSafeArea()
                 
-                // MARK: - Picker
-                Picker("Selecione um local", selection: $selectedLocation) {
-                    Text("Explorar pontos").tag(nil as PontoRecarga?)
-                    ForEach(viewModel.pontos) { loc in
-                        Text(loc.nome).tag(loc as PontoRecarga?)
-                    }
-                }
-                .pickerStyle(.menu)
-                .tint(.primary)
-                .padding(.horizontal, 16)
-                .padding(.vertical, 8)
-                .background {
-                    Capsule()
-                        .fill(.ultraThinMaterial)
-                        .shadow(color: .black.opacity(0.2), radius: 10, x: 0, y: 5)
-                }
-                .overlay {
-                    Capsule()
-                        .stroke(.white.opacity(0.3), lineWidth: 1)
-                }
-                .padding(.top, -50)
-                
+                // MARK: - Controles Superiores (Apenas o Botão de Filtro)
+                                VStack {
+                                    HStack {
+                                        Spacer()
+                                        
+                                        // MARK: - Botão de Filtro (Canto superior direito, agora branco)
+                                        Button {
+                                            mostrandoFiltros = true
+                                        } label: {
+                                            Image(systemName: "line.3.horizontal.decrease.circle.fill")
+                                                .font(.system(size: 32)) // Aumentei um pouco para dar mais destaque
+                                                .foregroundColor(.primary) // A cor do ícone
+                                                .background(
+                                                    Circle()
+                                                        .fill(.white) // FUNDO AGORA É BRANCO PURO
+                                                )
+                                                .shadow(color: .black.opacity(0.15), radius: 8, x: 0, y: 4) // Sombra mais suave
+                                        }
+                                        .padding(.trailing, 20) // Espaçamento da borda direita
+                                        .padding(.top, 12)     // Espaçamento do topo (SafeArea)
+                                    }
+                                }
                 // MARK: - Toast da rota
                 if showToast {
                     VStack {
@@ -183,6 +184,11 @@ struct ContentView: View {
                     await viewModel.carregarPontos()
                 }
             }
+            .sheet(isPresented: $mostrandoFiltros) {
+                            // Passamos o viewModel atual para que a view de filtros consiga acionar a busca
+                            FiltrosView(viewModel: viewModel)
+                                .presentationDetents([.medium, .large]) // Faz o Bottom Sheet não cobrir a tela toda se não precisar
+                        }
             .task {
                 await viewModel.carregarPontos()
             }
