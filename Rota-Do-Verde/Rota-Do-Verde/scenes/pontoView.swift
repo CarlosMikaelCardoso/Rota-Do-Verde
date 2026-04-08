@@ -2,6 +2,7 @@ import SwiftUI
 
 struct PontoView: View {
     let pontoId: String
+    var onRouteRequested: (() -> Void)?
     @StateObject private var viewModel = PontosViewModel()
     
     @State private var mostrarPopupSucesso = false
@@ -119,7 +120,20 @@ struct PontoView: View {
                             Text(ponto.ultimaAtualizacao ?? "Não informada")
                                 .foregroundColor(.secondary)
                         }
-                        
+// MARK: - Botão Traçar Rota (Inserido no topo ou antes das ações)
+                        Button {
+                            onRouteRequested?()
+                        } label: {
+                            HStack {
+                                Image(systemName: "arrow.triangle.turn.up.right.diamond.fill")
+                                Text("Traçar Rota até este local")
+                            }
+                            .frame(maxWidth: .infinity)
+                            .padding()
+                            .background(Color.blue)
+                            .foregroundColor(.white)
+                            .cornerRadius(12)
+                        }
                         Group {
                             blocoTitulo("Uso do ponto")
                             
