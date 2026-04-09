@@ -5,6 +5,9 @@ import Foundation
 
 struct ContentView: View {
     @State private var animatedCoordinates: [CLLocationCoordinate2D] = []
+    @State private var mostrandoConfiguracoes = false
+    @AppStorage("temaApp") private var temaAtual: TemaApp = .sistema
+    @Environment(\.colorScheme) var colorScheme
     
     @StateObject private var viewModel = PontosViewModel()
     @State private var selectedLocation: PontoRecarga?
@@ -25,179 +28,193 @@ struct ContentView: View {
         )
     )
     
-    var body: some View {
-        NavigationStack {
-            ZStack(alignment: .top) {
-                // MARK: - Mapa
-                Map(position: $position, selection: $selectedLocation) {
-                    UserAnnotation()
+        var body: some View {
+            NavigationStack {
+                ZStack(alignment: .top) {
+                    // MARK: - Mapa
+                    Map(position: $position, selection: $selectedLocation) {
+                        UserAnnotation()
+                        
+                        if !animatedCoordinates.isEmpty {
+                            MapPolyline(coordinates: animatedCoordinates)
+                                .stroke(
+                                    LinearGradient(colors: [.verdePrincipal, .cyan], startPoint: .leading, endPoint: .trailing),
+                                    style: StrokeStyle(lineWidth: 6, lineCap: .round, lineJoin: .round)
+                                )
+                        }
+                        
+                        ForEach(viewModel.pontos) { loc in
+                            Marker(loc.nome, coordinate: loc.coordinate)
+                                .tag(loc)
+                        }
+                    }
+                    .mapStyle(.standard(emphasis: .muted))
+                    .ignoresSafeArea()
                     
-                    // Substitua a lógica de MapPolyline(route) por esta:
-                    if !animatedCoordinates.isEmpty {
-                        MapPolyline(coordinates: animatedCoordinates)
-                            .stroke(
-                                LinearGradient(colors: [.green, .cyan], startPoint: .leading, endPoint: .trailing),
-                                style: StrokeStyle(lineWidth: 6, lineCap: .round, lineJoin: .round)
-                            )
+                    // MARK: - Controles Superiores
+                    VStack {
+                        HStack {
+                            Spacer()
+                            
+                            VStack(spacing: 16) {
+                                // MARK: - Botão de Configurações
+                                Button {
+                                    mostrandoConfiguracoes = true
+                                } label: {
+                                    Image(systemName: "gearshape.fill")
+                                        .font(.system(size: 26))
+                                        .foregroundColor(.primary)
+                                        .frame(width: 50, height: 50)
+                                        .background(
+                                            Circle()
+                                                .fill(.corFundoCustomizada)
+                                        )
+                                        .shadow(color: .black.opacity(0.15), radius: 8, x: 0, y: 4)
+                                }
+                                
+                                // MARK: - Botão de Filtro
+                                Button {
+                                    mostrandoFiltros = true
+                                } label: {
+                                    Image(systemName: "line.3.horizontal.decrease.circle.fill")
+                                        .font(.system(size: 32))
+                                        .foregroundColor(.primary)
+                                        .background(
+                                            Circle()
+                                                .fill(.corFundoCustomizada)
+                                        )
+                                        .shadow(color: .black.opacity(0.15), radius: 8, x: 0, y: 4)
+                                }
+                            }
+                            .padding(.trailing, 20)
+                            .padding(.top, 12)
+                        }
                     }
                     
-                    ForEach(viewModel.pontos) { loc in
-                        Marker(loc.nome, coordinate: loc.coordinate)
-                            .tag(loc)
-                    }
-                }
-                .mapStyle(.standard(emphasis: .muted))
-                .ignoresSafeArea()
-                
-                // MARK: - Controles Superiores (Apenas o Botão de Filtro)
-                                VStack {
-                                    HStack {
-                                        Spacer()
-                                        
-                                        // MARK: - Botão de Filtro (Canto superior direito, agora branco)
-                                        Button {
-                                            mostrandoFiltros = true
-                                        } label: {
-                                            Image(systemName: "line.3.horizontal.decrease.circle.fill")
-                                                .font(.system(size: 32)) // Aumentei um pouco para dar mais destaque
-                                                .foregroundColor(.primary) // A cor do ícone
-                                                .background(
-                                                    Circle()
-                                                        .fill(.white) // FUNDO AGORA É BRANCO PURO
-                                                )
-                                                .shadow(color: .black.opacity(0.15), radius: 8, x: 0, y: 4) // Sombra mais suave
-                                        }
-                                        .padding(.trailing, 20) // Espaçamento da borda direita
-                                        .padding(.top, 12)     // Espaçamento do topo (SafeArea)
+                    // MARK: - Toast da rota
+                    if showToast {
+                        VStack {
+                            Spacer()
+                            
+                            HStack(spacing: 20) {
+                                HStack {
+                                    Image(systemName: "ruler")
+                                    Text(distanciaRota)
+                                }
+                                
+                                HStack {
+                                    Image(systemName: "clock")
+                                    Text(tempoRota)
+                                }
+                            }
+                            .font(.headline)
+                            .padding()
+                            .background(.ultraThinMaterial)
+                            .foregroundColor(.primary)
+                            .clipShape(Capsule())
+                            .shadow(color: .black.opacity(0.3), radius: 10, x: 0, y: 5)
+                            .padding(.bottom, 60)
+                            .transition(.move(edge: .bottom).combined(with: .opacity))
+                            .onAppear {
+                                DispatchQueue.main.asyncAfter(deadline: .now() + 15) {
+                                    withAnimation {
+                                        showToast = false
                                     }
                                 }
-                // MARK: - Toast da rota
-                if showToast {
+                            }
+                        }
+                        .zIndex(1)
+                    }
+                    
+                    // MARK: - Botões flutuantes
                     VStack {
                         Spacer()
                         
-                        HStack(spacing: 20) {
-                            HStack {
-                                Image(systemName: "ruler")
-                                Text(distanciaRota)
-                            }
+                        HStack {
+                            Spacer()
                             
-                            HStack {
-                                Image(systemName: "clock")
-                                Text(tempoRota)
-                            }
-                        }
-                        .font(.headline)
-                        .padding()
-                        .background(.ultraThinMaterial)
-                        .foregroundColor(.primary)
-                        .clipShape(Capsule())
-                        .shadow(color: .black.opacity(0.3), radius: 10, x: 0, y: 5)
-                        .padding(.bottom, 60)
-                        .transition(.move(edge: .bottom).combined(with: .opacity))
-                        .onAppear {
-                            DispatchQueue.main.asyncAfter(deadline: .now() + 15) {
-                                withAnimation {
-                                    showToast = false
+                            VStack(spacing: 16) {
+                                Button(action: {
+                                    mostrandoTelaAdicionar = true
+                                }) {
+                                    Image(systemName: "plus")
+                                        .font(.title.bold())
+                                        .padding()
+                                        .background(Color.verdePrincipal)
+                                        .foregroundColor(colorScheme == .dark ? .black : .white)
+                                        .clipShape(Circle())
+                                        .shadow(color: .black.opacity(0.3), radius: 5, x: 0, y: 3)
+                                }
+                                
+                                Button(action: {
+                                    withAnimation(.snappy) {
+                                        position = .userLocation(fallback: .automatic)
+                                    }
+                                }) {
+                                    Image(systemName: "location.north.circle")
+                                        .font(.title.bold())
+                                        .padding()
+                                        .background(Color.verdePrincipal)
+                                        .foregroundColor(colorScheme == .dark ? .black : .white)
+                                        .clipShape(Circle())
+                                        .shadow(color: .black.opacity(0.3), radius: 5, x: 0, y: 3)
                                 }
                             }
+                            .padding(.trailing, 20)
+                            .padding(.bottom, 30)
                         }
                     }
-                    .zIndex(1)
                 }
-                
-                // MARK: - Botões flutuantes
-                VStack {
-                    Spacer()
+                .onChange(of: selectedLocation) { _, newLocation in
+                    guard let newLocation else {
+                        route = nil
+                        showToast = false
+                        return
+                    }
                     
-                    HStack {
-                        Spacer()
-                        
-                        VStack(spacing: 16) {
-                            // Botão adicionar ponto
-                            Button(action: {
-                                mostrandoTelaAdicionar = true
-                            }) {
-                                Image(systemName: "plus")
-                                    .font(.title.bold())
-                                    .padding()
-                                    .background(Color.green)
-                                    .foregroundColor(.white)
-                                    .clipShape(Circle())
-                                    .shadow(color: .black.opacity(0.3), radius: 5, x: 0, y: 3)
-                            }
-                            
-                            // Botão centralizar no usuário
-                            Button(action: {
-                                withAnimation(.snappy) {
-                                    position = .userLocation(fallback: .automatic)
-                                }
-                            }) {
-                                Image(systemName: "location.north.circle")
-                                    .font(.title.bold())
-                                    .padding()
-                                    .background(Color.green)
-                                    .foregroundColor(.white)
-                                    .clipShape(Circle())
-                                    .shadow(color: .black.opacity(0.3), radius: 5, x: 0, y: 3)
-                            }
-                        }
-                        .padding(.trailing, 20)
-                        .padding(.bottom, 30)
-                    }
-                }
-            }
-            
-            // MARK: - Lógica de seleção do ponto
-            .onChange(of: selectedLocation) { _, newLocation in
-                guard let newLocation else {
-                    route = nil
-                    showToast = false
-                    return
-                }
-                
-                withAnimation(.snappy) {
-                    position = .region(
-                        MKCoordinateRegion(
-                            center: newLocation.coordinate,
-                            span: MKCoordinateSpan(latitudeDelta: 0.015, longitudeDelta: 0.015)
+                    withAnimation(.snappy) {
+                        position = .region(
+                            MKCoordinateRegion(
+                                center: newLocation.coordinate,
+                                span: MKCoordinateSpan(latitudeDelta: 0.015, longitudeDelta: 0.015)
+                            )
                         )
-                    )
+                    }
+                    
+                    DispatchQueue.main.asyncAfter(deadline: .now() + 0.6) {
+                        locationForNavigation = newLocation
+                    }
                 }
-                
-                DispatchQueue.main.asyncAfter(deadline: .now() + 0.6) {
-                    locationForNavigation = newLocation
-                }
-            }
-
-            .navigationDestination(item: $locationForNavigation) { local in
-                PontoView(pontoId: local.id) {
-                    // Ação quando o botão de rota é clicado na PontoView
-                    locationForNavigation = nil // Fecha a PontoView voltando ao mapa
-                    if let userCoord = locationManager.userLocation {
-                        Task {
-                            // Pequeno delay para a animação de volta ser suave antes de traçar a rota
-                            try? await Task.sleep(nanoseconds: 500_000_000)
-                            await calcularRota(origem: userCoord, destino: local.coordinate)
+                .navigationDestination(item: $locationForNavigation) { local in
+                    PontoView(pontoId: local.id) {
+                        locationForNavigation = nil
+                        if let userCoord = locationManager.userLocation {
+                            Task {
+                                try? await Task.sleep(nanoseconds: 500_000_000)
+                                await calcularRota(origem: userCoord, destino: local.coordinate)
+                            }
                         }
                     }
                 }
-            }
-            .sheet(isPresented: $mostrandoTelaAdicionar) {
-                AdicionarPontoView {
+                .sheet(isPresented: $mostrandoTelaAdicionar) {
+                    AdicionarPontoView {
+                        await viewModel.carregarPontos()
+                    }
+                }
+                .sheet(isPresented: $mostrandoFiltros) {
+                    FiltrosView(viewModel: viewModel)
+                        .presentationDetents([.medium, .large])
+                }
+                .sheet(isPresented: $mostrandoConfiguracoes) {
+                    ConfiguracoesView()
+                        .presentationDetents([.medium])
+                }
+                .task {
                     await viewModel.carregarPontos()
                 }
             }
-            .sheet(isPresented: $mostrandoFiltros) {
-                            // Passamos o viewModel atual para que a view de filtros consiga acionar a busca
-                            FiltrosView(viewModel: viewModel)
-                                .presentationDetents([.medium, .large]) // Faz o Bottom Sheet não cobrir a tela toda se não precisar
-                        }
-            .task {
-                await viewModel.carregarPontos()
-            }
+            .preferredColorScheme(temaAtual.colorScheme)
         }
-    }
     
 // MARK: - Calcular Rota
     private func calcularRota(origem: CLLocationCoordinate2D, destino: CLLocationCoordinate2D) async {
