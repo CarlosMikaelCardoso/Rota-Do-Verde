@@ -1,5 +1,7 @@
 import SwiftUI
 import MapKit
+import CoreLocation
+import Contacts
 
 struct AdicionarPontoView: View {
     @Environment(\.dismiss) private var dismiss
@@ -11,6 +13,8 @@ struct AdicionarPontoView: View {
     @State private var mostrarPopupSucesso = false
     @State private var mostrarPopupErro = false
     
+    @State private var endereco: String? = nil
+    
     let onPontoCriado: () async -> Void
     
     var body: some View {
@@ -19,7 +23,6 @@ struct AdicionarPontoView: View {
                 Section("Informações principais") {
                     TextField("Nome do ponto", text: $viewModel.nome)
                     TextField("Descrição", text: $viewModel.descricao, axis: .vertical)
-                    TextField("Endereço", text: $viewModel.endereco, axis: .vertical)
                     
                     Picker("Status", selection: $viewModel.status) {
                         Text("Funcionando").tag("funcionando")
@@ -39,19 +42,18 @@ struct AdicionarPontoView: View {
                     
                     if let coordenadaSelecionada {
                         Text("Latitude: \(coordenadaSelecionada.latitude)")
-                            .font(.caption)
+                            .foregroundStyle(.secondary)
                         Text("Longitude: \(coordenadaSelecionada.longitude)")
-                            .font(.caption)
-                    } else {
-                        Text("Nenhum local selecionado")
-                            .foregroundColor(.secondary)
+                            .foregroundStyle(.secondary)
                     }
                     
-                    TextField("Latitude", text: $viewModel.latitude)
-                        .keyboardType(.decimalPad)
-                    
-                    TextField("Longitude", text: $viewModel.longitude)
-                        .keyboardType(.decimalPad)
+                    Text(endereco ?? "Nenhum local selecionado")
+                        .foregroundColor(.secondary)
+                        .task(id: coordenadaSelecionada?.latitude) {
+                            guard let coordenada = coordenadaSelecionada else { return }
+                            endereco = "Buscando endereço..."
+                            await buscarEndereco(latitude: coordenada.latitude, longitude: coordenada.longitude)
+                        }
                 }
                 
                 Section("Conector principal") {
@@ -127,6 +129,32 @@ struct AdicionarPontoView: View {
             } message: {
                 Text(viewModel.erro ?? "Ocorreu um erro ao salvar o ponto.")
             }
+        }
+    }
+    
+    @MainActor
+    private func buscarEndereco(latitude: Double, longitude: Double) async {
+        let localizacao = CLLocation(latitude: latitude, longitude: longitude)
+        let geocoder = CLGeocoder()
+        
+        do {
+            let placemarks = try await geocoder.reverseGeocodeLocation(localizacao)
+            
+            guard let placemark = placemarks.first else {
+                self.endereco = "Endereço não encontrado"
+                return
+            }
+            
+            if let postalAddress = placemark.postalAddress {
+                let formatter = CNPostalAddressFormatter()
+                self.endereco = formatter.string(from: postalAddress).replacingOccurrences(of: "\n", with: ", ")
+            } else {
+                self.endereco = placemark.name ?? "Endereço não encontrado"
+            }
+            
+        } catch {
+            print("Erro de geocodificação: \(error.localizedDescription)")
+            self.endereco = "Falha ao buscar endereço"
         }
     }
 }
