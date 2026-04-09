@@ -3,10 +3,12 @@ import SwiftUI
 struct PontoView: View {
     let pontoId: String
     var onRouteRequested: (() -> Void)?
+    
     @StateObject private var viewModel = PontosViewModel()
     
     @State private var mostrarPopupSucesso = false
     @State private var mostrarPopupErro = false
+    @State private var mostrarTelaEditar = false
     
     var body: some View {
         Group {
@@ -36,7 +38,6 @@ struct PontoView: View {
                 .frame(maxWidth: .infinity, maxHeight: .infinity)
                 
             } else if let ponto = viewModel.pontoSelecionado {
-                // ZStack adicionado para permitir o botão flutuante no canto
                 ZStack(alignment: .bottomTrailing) {
                     ScrollView {
                         VStack(alignment: .leading, spacing: 24) {
@@ -188,17 +189,14 @@ struct PontoView: View {
                                 }
                             }
                             
-                            // Espaçamento no fim da rolagem para o botão flutuante não cobrir nada importante
                             Spacer().frame(height: 80)
                         }
                         .padding()
                     }
                     
-                    // MARK: - Botão Flutuante de Traçar Rota
                     Button {
                         onRouteRequested?()
                     } label: {
-                        // Voltei para o ícone que já estava funcionando no seu código original
                         Image(systemName: "arrow.triangle.turn.up.right.diamond.fill")
                             .font(.system(size: 24, weight: .bold))
                             .foregroundColor(.white)
@@ -212,6 +210,15 @@ struct PontoView: View {
                 }
                 .navigationTitle(ponto.nome)
                 .navigationBarTitleDisplayMode(.inline)
+                .toolbar {
+                    ToolbarItem(placement: .topBarTrailing) {
+                        Button {
+                            mostrarTelaEditar = true
+                        } label: {
+                            Image(systemName: "square.and.pencil")
+                        }
+                    }
+                }
                 
             } else {
                 VStack {
@@ -233,6 +240,14 @@ struct PontoView: View {
             Button("OK", role: .cancel) { }
         } message: {
             Text(viewModel.erro ?? "Ocorreu um erro.")
+        }
+        .sheet(isPresented: $mostrarTelaEditar) {
+            if let ponto = viewModel.pontoSelecionado {
+                EditarPontoView(ponto: ponto) {
+                    await viewModel.carregarPontoPorId(ponto.id)
+                    await viewModel.carregarPontos()
+                }
+            }
         }
     }
     
