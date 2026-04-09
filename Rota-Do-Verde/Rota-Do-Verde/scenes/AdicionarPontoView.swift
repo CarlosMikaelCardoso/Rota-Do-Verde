@@ -15,6 +15,16 @@ struct AdicionarPontoView: View {
     
     @State private var endereco: String? = nil
     
+    private let TIPOS_DE_CARREGADORES: [String] = [
+        "CCS2",
+        "Emergência/Portátil",
+        "Wallbox",
+        "Fast Charge DC",
+        "Mennekes",
+        "GB/T",
+        "Outros"
+    ]
+    
     let onPontoCriado: () async -> Void
     
     var body: some View {
@@ -57,7 +67,15 @@ struct AdicionarPontoView: View {
                 }
                 
                 Section("Conector principal") {
-                    TextField("Tipo do conector", text: $viewModel.conectorTipo)
+                    Picker("Tipo do conector", selection: $viewModel.conectorTipo) {
+                        ForEach(TIPOS_DE_CARREGADORES, id: \.self) { tipo in
+                                Text(tipo)
+                        }
+                    }
+                    
+                    if viewModel.conectorTipo == "Outros" {
+                        TextField("Tipo do conector", text: $viewModel.conectorTipo)
+                    }
                     TextField("Potência (kW)", text: $viewModel.conectorPotencia)
                         .keyboardType(.numberPad)
                 }
