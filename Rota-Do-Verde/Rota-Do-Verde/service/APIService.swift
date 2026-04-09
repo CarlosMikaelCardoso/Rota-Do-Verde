@@ -27,7 +27,7 @@ final class APIService {
     static let shared = APIService()
     
     // Se for testar em iPhone físico, troque pelo IP da sua máquina na rede
-    private let baseURL = "http://10.119.172.36:1880"
+    private let baseURL = "http://127.0.0.1:1880"
     
     private init() {}
     

@@ -172,19 +172,28 @@ struct AdicionarPontoView: View {
             
             guard let placemark = placemarks.first else {
                 self.endereco = "Endereço não encontrado"
+                self.viewModel.endereco = ""
                 return
             }
             
             if let postalAddress = placemark.postalAddress {
                 let formatter = CNPostalAddressFormatter()
-                self.endereco = formatter.string(from: postalAddress).replacingOccurrences(of: "\n", with: ", ")
+                let enderecoFormatado = formatter
+                    .string(from: postalAddress)
+                    .replacingOccurrences(of: "\n", with: ", ")
+                
+                self.endereco = enderecoFormatado
+                self.viewModel.endereco = enderecoFormatado
             } else {
-                self.endereco = placemark.name ?? "Endereço não encontrado"
+                let enderecoFormatado = placemark.name ?? "Endereço não encontrado"
+                self.endereco = enderecoFormatado
+                self.viewModel.endereco = enderecoFormatado
             }
             
         } catch {
             print("Erro de geocodificação: \(error.localizedDescription)")
             self.endereco = "Falha ao buscar endereço"
+            self.viewModel.endereco = ""
         }
     }
 }

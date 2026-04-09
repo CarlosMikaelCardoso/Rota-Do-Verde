@@ -63,7 +63,7 @@ struct VeiculosView: View {
                                     Text("Escolha seu veículo")
                                         .font(.title2.bold())
                                     
-                                    Text("Selecione um modelo para verificar compatibilidade com os pontos.")
+                                    Text("Selecione um modelo para ver apenas os pontos compatíveis no mapa.")
                                         .font(.subheadline)
                                         .foregroundColor(.secondary)
                                 }
@@ -113,9 +113,9 @@ struct VeiculoCardView: View {
                 ZStack {
                     RoundedRectangle(cornerRadius: 16)
                         .fill(Color.blue.opacity(0.12))
-                        .frame(width: 60, height: 60)
+                        .frame(width: 58, height: 58)
                     
-                    Image(systemName: "bolt.car.circle.fill")
+                    Image(systemName: "car.fill")
                         .font(.title2)
                         .foregroundColor(.blue)
                 }
@@ -169,7 +169,7 @@ struct VeiculoCardView: View {
             }
         }
         .padding(16)
-        .background(.white)
+        .background(Color(.secondarySystemBackground))
         .clipShape(RoundedRectangle(cornerRadius: 22))
         .shadow(color: .black.opacity(0.08), radius: 10, x: 0, y: 4)
     }

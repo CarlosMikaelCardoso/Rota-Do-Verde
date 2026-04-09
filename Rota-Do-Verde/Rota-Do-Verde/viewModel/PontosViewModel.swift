@@ -9,12 +9,19 @@ final class PontosViewModel: ObservableObject {
     @Published var erro: String?
     @Published var mensagemAcao: String?
     
+    // MARK: - Compatibilidade
+    @Published var veiculoSelecionado: Veiculo?
+    @Published var filtroCompatibilidadeAtivo = false
+    
+    // MARK: - Carregar todos os pontos
     func carregarPontos() async {
         carregando = true
         erro = nil
         
         do {
             pontos = try await APIService.shared.buscarPontos()
+            filtroCompatibilidadeAtivo = false
+            veiculoSelecionado = nil
         } catch {
             erro = error.localizedDescription
         }
@@ -22,6 +29,7 @@ final class PontosViewModel: ObservableObject {
         carregando = false
     }
     
+    // MARK: - Carregar ponto por id
     func carregarPontoPorId(_ id: String) async {
         carregando = true
         erro = nil
@@ -35,6 +43,7 @@ final class PontosViewModel: ObservableObject {
         carregando = false
     }
     
+    // MARK: - Filtros normais
     func filtrarPontos(
         conector: String? = nil,
         potenciaMin: Int? = nil,
@@ -58,6 +67,30 @@ final class PontosViewModel: ObservableObject {
         carregando = false
     }
     
+    // MARK: - Compatibilidade por veículo
+    func carregarCompatibilidade(veiculo: Veiculo) async {
+        carregando = true
+        erro = nil
+        
+        do {
+            let resposta = try await APIService.shared.buscarCompatibilidade(veiculoId: veiculo.id)
+            pontos = resposta.pontosCompativeis
+            veiculoSelecionado = veiculo
+            filtroCompatibilidadeAtivo = true
+        } catch {
+            erro = error.localizedDescription
+        }
+        
+        carregando = false
+    }
+    
+    func limparCompatibilidade() async {
+        veiculoSelecionado = nil
+        filtroCompatibilidadeAtivo = false
+        await carregarPontos()
+    }
+    
+    // MARK: - Ocupar ponto
     func ocuparPonto(_ id: String) async -> Bool {
         carregando = true
         erro = nil
@@ -76,6 +109,7 @@ final class PontosViewModel: ObservableObject {
         }
     }
     
+    // MARK: - Desocupar ponto
     func desocuparPonto(_ id: String) async -> Bool {
         carregando = true
         erro = nil
