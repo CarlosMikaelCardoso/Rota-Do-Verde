@@ -24,6 +24,7 @@ struct AdicionarPontoView: View {
         "GB/T",
         "Outros"
     ]
+    @State private var conectorSelecionado: String = ""
     
     let onPontoCriado: () async -> Void
     
@@ -67,14 +68,25 @@ struct AdicionarPontoView: View {
                 }
                 
                 Section("Conector principal") {
-                    Picker("Tipo do conector", selection: $viewModel.conectorTipo) {
+                    Picker("Tipo do conector", selection: $conectorSelecionado) {
                         ForEach(TIPOS_DE_CARREGADORES, id: \.self) { tipo in
                                 Text(tipo)
                         }
                     }
+                    .onChange(of: conectorSelecionado) { _, newValue in
+                        if newValue != "Outros" {
+                            viewModel.conectorTipo = newValue
+                        } else {
+                            viewModel.conectorTipo = ""
+                        }
+                    }
                     
-                    if viewModel.conectorTipo == "Outros" {
-                        TextField("Tipo do conector", text: $viewModel.conectorTipo)
+                    if conectorSelecionado == "Outros" {
+                        TextField(
+                            "Tipo do conector",
+                            text: $viewModel.conectorTipo
+                        )
+                            .transition(.opacity)
                     }
                     TextField("Potência (kW)", text: $viewModel.conectorPotencia)
                         .keyboardType(.numberPad)
