@@ -9,6 +9,7 @@ struct PontoView: View {
     @State private var mostrarPopupSucesso = false
     @State private var mostrarPopupErro = false
     @State private var mostrarTelaEditar = false
+    @State private var mostrarTelaSugestao = false
     
     var body: some View {
         Group {
@@ -189,7 +190,7 @@ struct PontoView: View {
                                 }
                             }
                             
-                            Spacer().frame(height: 80)
+                            Spacer().frame(height: 90)
                         }
                         .padding()
                     }
@@ -211,7 +212,13 @@ struct PontoView: View {
                 .navigationTitle(ponto.nome)
                 .navigationBarTitleDisplayMode(.inline)
                 .toolbar {
-                    ToolbarItem(placement: .topBarTrailing) {
+                    ToolbarItemGroup(placement: .topBarTrailing) {
+                        Button {
+                            mostrarTelaSugestao = true
+                        } label: {
+                            Image(systemName: "exclamationmark.bubble")
+                        }
+                        
                         Button {
                             mostrarTelaEditar = true
                         } label: {
@@ -247,6 +254,11 @@ struct PontoView: View {
                     await viewModel.carregarPontoPorId(ponto.id)
                     await viewModel.carregarPontos()
                 }
+            }
+        }
+        .sheet(isPresented: $mostrarTelaSugestao) {
+            if let ponto = viewModel.pontoSelecionado {
+                SugestaoView(pontoId: ponto.id)
             }
         }
     }
